@@ -26,7 +26,7 @@ export function playAudioBuffer(audioContext, buffer, startTimeRef, analyzer) {
 
   const currentTime = audioContext.currentTime;
   if (startTimeRef.current < currentTime) {
-    startTimeRef.current = currentTime;
+    startTimeRef.current = currentTime + 0.02;
   }
 
   source.start(startTimeRef.current);

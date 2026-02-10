@@ -63,7 +63,7 @@ export const App = ({
   useEffect(() => {
     if (!audioContext.current) {
       audioContext.current = new (window.AudioContext || window.webkitAudioContext)({
-        latencyHint: "interactive",
+        latencyHint: "playback",
         sampleRate: 24000,
       });
       agentVoiceAnalyser.current = audioContext.current.createAnalyser();
@@ -87,6 +87,7 @@ export const App = ({
   const clearAudioBuffer = () => {
     scheduledAudioSources.current.forEach((source) => source.stop());
     scheduledAudioSources.current = [];
+    startTimeRef.current = -1;
   };
 
   // MICROPHONE AND SOCKET MANAGEMENT
