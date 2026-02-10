@@ -50,8 +50,7 @@ export const voiceBotReducer = (state: VoiceBotState, action: VoiceBotAction) =>
         const isAssistantDup =
           "assistant" in newMsg &&
           "assistant" in lastMsg &&
-          (newMsg as AssistantMessage).assistant ===
-            (lastMsg as AssistantMessage).assistant;
+          (newMsg as AssistantMessage).assistant === (lastMsg as AssistantMessage).assistant;
         if (isUserDup || isAssistantDup) return state;
       }
       return { ...state, messages: [...state.messages, newMsg] };

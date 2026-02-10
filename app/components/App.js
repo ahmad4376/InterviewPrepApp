@@ -382,7 +382,10 @@ export const App = ({
                     content: JSON.stringify(result),
                   });
                 } catch (sendErr) {
-                  console.error(`[FunctionCall] Failed to send response for ${func.name}:`, sendErr);
+                  console.error(
+                    `[FunctionCall] Failed to send response for ${func.name}:`,
+                    sendErr,
+                  );
                 }
               })();
             }

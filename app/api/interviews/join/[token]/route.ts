@@ -5,10 +5,7 @@ import Interview from "app/models/Interview";
 import CandidateSession from "app/models/CandidateSession";
 import { currentUser } from "@clerk/nextjs/server";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ token: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,10 +26,7 @@ export async function GET(
 
   // Block self-join
   if ((interview.userId as string) === userId) {
-    return NextResponse.json(
-      { error: "You are the creator of this interview" },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: "You are the creator of this interview" }, { status: 403 });
   }
 
   // Check if candidate already has a session
@@ -64,10 +58,7 @@ export async function GET(
   });
 }
 
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ token: string }> },
-) {
+export async function POST(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -87,18 +78,13 @@ export async function POST(
   }
 
   if ((interview.userId as string) === userId) {
-    return NextResponse.json(
-      { error: "You are the creator of this interview" },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: "You are the creator of this interview" }, { status: 403 });
   }
 
   // Get candidate info from Clerk
   const user = await currentUser();
-  const candidateName =
-    user?.fullName || user?.firstName || "Unknown Candidate";
-  const candidateEmail =
-    user?.primaryEmailAddress?.emailAddress || "";
+  const candidateName = user?.fullName || user?.firstName || "Unknown Candidate";
+  const candidateEmail = user?.primaryEmailAddress?.emailAddress || "";
 
   try {
     const session = await CandidateSession.create({
@@ -117,10 +103,7 @@ export async function POST(
       currentPlanIndex: interview.currentPlanIndex,
     });
 
-    return NextResponse.json(
-      { sessionId: String(session._id) },
-      { status: 201 },
-    );
+    return NextResponse.json({ sessionId: String(session._id) }, { status: 201 });
   } catch (err) {
     // Duplicate key = candidate already has a session
     if (

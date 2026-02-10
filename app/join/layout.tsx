@@ -4,11 +4,7 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import GlobalGradient from "../components/landing/GlobalGradient";
 
-export default function JoinLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function JoinLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0c0c0c]">
       <GlobalGradient />

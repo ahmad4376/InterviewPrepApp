@@ -75,10 +75,7 @@ export async function PATCH(
   };
 
   if (!ALLOWED_STATUSES.includes(status as (typeof ALLOWED_STATUSES)[number])) {
-    return NextResponse.json(
-      { error: "Invalid status" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
   await connectDB();
@@ -111,10 +108,7 @@ export async function PATCH(
       console.error("Feedback generation failed:", err);
     }
 
-    await CandidateSession.findOneAndUpdate(
-      { _id: sessionId },
-      { status, transcript, feedback },
-    );
+    await CandidateSession.findOneAndUpdate({ _id: sessionId }, { status, transcript, feedback });
 
     return NextResponse.json({ success: true, status });
   }

@@ -9,11 +9,7 @@ import ErrorBoundary from "../../../components/ErrorBoundary";
 import FeedbackPageTabs from "../../../components/FeedbackPageTabs";
 import type { TranscriptEntry } from "app/models/Interview";
 
-export default async function FeedbackPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getAuthUserId();
   if (!userId) notFound();
@@ -29,12 +25,8 @@ export default async function FeedbackPage({
       <ErrorBoundary>
         <div className="max-w-4xl mx-auto">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">
-              Interview Feedback
-            </h1>
-            <p className="text-gray-400 mb-1">
-              Feedback is not yet available for this interview.
-            </p>
+            <h1 className="text-2xl font-bold text-white mb-2">Interview Feedback</h1>
+            <p className="text-gray-400 mb-1">Feedback is not yet available for this interview.</p>
             <p className="text-gray-500 text-sm mb-6">
               Feedback typically takes 10-15 seconds to generate.
             </p>
@@ -66,9 +58,7 @@ export default async function FeedbackPage({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              {interview.title as string}
-            </h1>
+            <h1 className="text-2xl font-bold text-white">{interview.title as string}</h1>
             <p className="text-gray-400 text-sm">
               {interview.company as string} &middot;{" "}
               {new Date(interview.createdAt as Date).toLocaleDateString()}

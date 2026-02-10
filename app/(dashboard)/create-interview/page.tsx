@@ -4,16 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ErrorBoundary from "../../components/ErrorBoundary";
-import {
-  Loader2,
-  Monitor,
-  Server,
-  Layers,
-  BarChart3,
-  Cloud,
-  Briefcase,
-  X,
-} from "lucide-react";
+import { Loader2, Monitor, Server, Layers, BarChart3, Cloud, Briefcase, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Template {
@@ -142,7 +133,9 @@ function CreateInterviewForm() {
                 }`}
               >
                 <Icon size={20} className={isSelected ? "text-[#3ecf8e]" : "text-gray-400"} />
-                <p className={`mt-2 text-sm font-medium ${isSelected ? "text-[#3ecf8e]" : "text-white"}`}>
+                <p
+                  className={`mt-2 text-sm font-medium ${isSelected ? "text-[#3ecf8e]" : "text-white"}`}
+                >
                   {template.name}
                 </p>
               </button>
@@ -151,7 +144,9 @@ function CreateInterviewForm() {
         </div>
         {selectedTemplate && (
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-            <span>Using template: <span className="text-[#3ecf8e]">{selectedTemplate}</span></span>
+            <span>
+              Using template: <span className="text-[#3ecf8e]">{selectedTemplate}</span>
+            </span>
             <button
               type="button"
               onClick={handleClearTemplate}

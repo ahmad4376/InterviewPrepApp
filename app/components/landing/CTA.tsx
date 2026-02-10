@@ -1,4 +1,4 @@
-import { SignUpButton } from '@clerk/nextjs'
+import { SignUpButton } from "@clerk/nextjs";
 
 export default function CTA() {
   return (
@@ -19,9 +19,7 @@ export default function CTA() {
                 </button>
               </SignUpButton>
             </div>
-            <p className="mt-4 text-sm text-gray-400">
-              No credit card required
-            </p>
+            <p className="mt-4 text-sm text-gray-400">No credit card required</p>
           </div>
 
           {/* Decorative gradient */}
@@ -30,5 +28,5 @@ export default function CTA() {
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,7 +1,7 @@
 interface FeatureCardProps {
-  icon: React.ReactNode
-  title: string
-  description: string
+  icon: React.ReactNode;
+  title: string;
+  description: string;
 }
 
 export default function FeatureCard({ icon, title, description }: FeatureCardProps) {
@@ -15,5 +15,5 @@ export default function FeatureCard({ icon, title, description }: FeatureCardPro
       </div>
       <p className="mt-4 text-gray-300">{description}</p>
     </div>
-  )
+  );
 }

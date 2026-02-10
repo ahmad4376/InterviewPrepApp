@@ -22,7 +22,10 @@ function loadEnvFile(filePath: string) {
       const key = trimmed.slice(0, eqIdx).trim();
       let val = trimmed.slice(eqIdx + 1).trim();
       // Remove surrounding quotes
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
         val = val.slice(1, -1);
       }
       if (!process.env[key]) process.env[key] = val;
@@ -188,10 +191,7 @@ async function seed() {
     { $sort: { _id: 1 as const } },
   ];
   const dist = await collection.aggregate(pipeline).toArray();
-  console.log(
-    "Difficulty distribution:",
-    dist.map((d) => `${d._id}: ${d.count}`).join(", "),
-  );
+  console.log("Difficulty distribution:", dist.map((d) => `${d._id}: ${d.count}`).join(", "));
 
   await mongoose.disconnect();
 }

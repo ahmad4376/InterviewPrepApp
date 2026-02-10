@@ -2,17 +2,11 @@
 
 import type { TranscriptEntry } from "app/models/Interview";
 
-export default function TranscriptDisplay({
-  transcript,
-}: {
-  transcript: TranscriptEntry[];
-}) {
+export default function TranscriptDisplay({ transcript }: { transcript: TranscriptEntry[] }) {
   if (!transcript || transcript.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-        <p className="text-gray-400 text-sm">
-          No transcript available for this interview.
-        </p>
+        <p className="text-gray-400 text-sm">No transcript available for this interview.</p>
       </div>
     );
   }
@@ -23,10 +17,7 @@ export default function TranscriptDisplay({
         {transcript.map((entry, index) => {
           const isUser = entry.role === "user";
           return (
-            <div
-              key={index}
-              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-            >
+            <div key={index} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                   isUser

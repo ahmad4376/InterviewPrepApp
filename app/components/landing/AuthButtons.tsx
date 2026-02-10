@@ -1,4 +1,4 @@
-import { SignInButton, SignUpButton } from '@clerk/nextjs'
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
 export default function AuthButtons() {
   return (
@@ -15,5 +15,5 @@ export default function AuthButtons() {
         </button>
       </SignUpButton>
     </>
-  )
+  );
 }

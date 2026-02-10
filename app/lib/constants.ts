@@ -35,9 +35,7 @@ export function buildInterviewConfig(
   title: string,
   company: string,
 ): StsConfig {
-  const numberedQuestions = questions
-    .map((q, i) => `${i + 1}. [${q.topic}] ${q.text}`)
-    .join("\n");
+  const numberedQuestions = questions.map((q, i) => `${i + 1}. [${q.topic}] ${q.text}`).join("\n");
 
   const prompt = `## Role
 You are a senior interviewer conducting a technical interview for the ${title} position at ${company}. Your name is Alex.
@@ -168,16 +166,10 @@ You are a senior interviewer for the ${title} position at ${company}. Your name 
           },
           user_response_summary: {
             type: "string" as const,
-            description:
-              "A brief 1-2 sentence summary of what the candidate said.",
+            description: "A brief 1-2 sentence summary of what the candidate said.",
           },
         },
-        required: [
-          "response_quality",
-          "next_action",
-          "suggested_topics",
-          "user_response_summary",
-        ],
+        required: ["response_quality", "next_action", "suggested_topics", "user_response_summary"],
       },
       // NO endpoint → client-side function call
     },
@@ -239,7 +231,8 @@ You are a senior backend engineer conducting a technical interview. Your name is
 - After all 3 questions are answered, clearly signal the end of the interview.`,
       functions: [],
     },
-    greeting: "Hi there! I'm Alex, and I'll be your backend engineering interviewer today. We'll go through three technical questions. Let's get started. For the first question: How would you design a caching layer for a high-traffic REST API? What technologies would you consider and what trade-offs would you think about?",
+    greeting:
+      "Hi there! I'm Alex, and I'll be your backend engineering interviewer today. We'll go through three technical questions. Let's get started. For the first question: How would you design a caching layer for a high-traffic REST API? What technologies would you consider and what trade-offs would you think about?",
   },
 };
 
@@ -305,7 +298,8 @@ export const sharedOpenGraphMetadata = {
   title: "InterviewPrepApp",
   type: "website",
   url: "/",
-  description: "AI-powered interview preparation — practice with real questions, get instant feedback.",
+  description:
+    "AI-powered interview preparation — practice with real questions, get instant feedback.",
 };
 
 export const latencyMeasurementQueryParam = "latency-measurement";

@@ -103,18 +103,26 @@ export class AudioStreamPlayer {
   }
 
   flush() {
-    if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     if (this.pendingChunks.length === 0) return;
 
     const merged = new Int16Array(this.pendingSamples);
     let offset = 0;
-    for (const chunk of this.pendingChunks) { merged.set(chunk, offset); offset += chunk.length; }
+    for (const chunk of this.pendingChunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
     this.pendingChunks = [];
     this.pendingSamples = 0;
 
     const buffer = this.audioContext.createBuffer(1, merged.length, this.sampleRate);
     const channelData = buffer.getChannelData(0);
-    for (let i = 0; i < merged.length; i++) { channelData[i] = merged[i] / 32768; }
+    for (let i = 0; i < merged.length; i++) {
+      channelData[i] = merged[i] / 32768;
+    }
 
     const currentTime = this.audioContext.currentTime;
     if (this.nextStartTime < currentTime) {
@@ -135,11 +143,18 @@ export class AudioStreamPlayer {
   }
 
   clear() {
-    if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     this.pendingChunks = [];
     this.pendingSamples = 0;
     for (const source of this.scheduledSources) {
-      try { source.stop(); } catch (e) { /* already stopped */ }
+      try {
+        source.stop();
+      } catch {
+        /* already stopped */
+      }
     }
     this.scheduledSources = [];
     this.isFirstFlush = true;

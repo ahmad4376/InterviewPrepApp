@@ -1,10 +1,9 @@
 ---
 name: Bug report
 about: Something is occurring that I think is wrong
-title: ''
+title: ""
 labels: "\U0001F41B bug"
-assignees: ''
-
+assignees: ""
 ---
 
 ## What is the current behavior?
@@ -22,7 +21,7 @@ assignees: ''
 ## Please tell us about your environment
 
 > We want to make sure the problem isn't specific to your operating system or programming language.
-  
+
 - **Operating System/Version:** Windows 10
 - **Language:** [all | TypeScript | Python | PHP | etc]
 - **Browser:** Chrome

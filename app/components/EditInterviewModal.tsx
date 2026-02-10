@@ -9,7 +9,11 @@ interface EditInterviewModalProps {
   onSaved: (updated: { _id: string; title: string; company: string; description: string }) => void;
 }
 
-export default function EditInterviewModal({ interview, onClose, onSaved }: EditInterviewModalProps) {
+export default function EditInterviewModal({
+  interview,
+  onClose,
+  onSaved,
+}: EditInterviewModalProps) {
   const [title, setTitle] = useState(interview.title);
   const [company, setCompany] = useState(interview.company);
   const [description, setDescription] = useState(interview.description);
@@ -55,12 +59,20 @@ export default function EditInterviewModal({ interview, onClose, onSaved }: Edit
       aria-modal="true"
       aria-labelledby="edit-modal-title"
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0c0c0c] p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 id="edit-modal-title" className="text-xl font-bold text-white">Edit Interview</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white">
+          <h2 id="edit-modal-title" className="text-xl font-bold text-white">
+            Edit Interview
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white"
+          >
             <X size={18} />
           </button>
         </div>
@@ -95,7 +107,10 @@ export default function EditInterviewModal({ interview, onClose, onSaved }: Edit
           </div>
 
           <div>
-            <label htmlFor="edit-description" className="block text-sm font-medium text-gray-300 mb-1">
+            <label
+              htmlFor="edit-description"
+              className="block text-sm font-medium text-gray-300 mb-1"
+            >
               Job Description
             </label>
             <textarea

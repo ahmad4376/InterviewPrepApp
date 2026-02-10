@@ -19,6 +19,7 @@ AI-powered interview preparation platform — practice with real questions via r
 InterviewPrepApp is a full-stack voice interview simulator built with Next.js. It uses **Deepgram** for real-time speech-to-text and text-to-speech, **OpenAI GPT-4o** for intelligent conversation and feedback analysis, and **MongoDB** for persistent storage. Users create interviews by providing a job title, company, and description — the system automatically generates relevant questions from a question bank (or via AI), then conducts an adaptive voice interview that adjusts difficulty based on candidate performance.
 
 The platform supports two modes:
+
 - **Individual interviews** — a single user practices and receives personal feedback.
 - **Mass interviews** — an interviewer creates a session and shares a link with multiple candidates, then reviews all results from a dashboard.
 
@@ -27,23 +28,27 @@ The platform supports two modes:
 ## Features
 
 ### Voice Interview Engine
+
 - Real-time bidirectional voice interaction via Deepgram WebSocket streaming
 - Speech-to-text using Deepgram Nova-3
 - Text-to-speech with selectable voices (Asteria, Orion, Luna, Arcas)
 - Natural conversational flow powered by GPT-4o function calling
 
 ### Adaptive Difficulty
+
 - Questions scale from level 1 (basic) to level 5 (expert)
 - Response quality assessment (excellent / good / partial / poor) drives difficulty adjustment
 - Topic-aware selection avoids repeating similar areas within recent questions
 - Bell-curve difficulty distribution (10% / 20% / 35% / 25% / 10% across levels 1-5)
 
 ### Intelligent Question Selection
+
 - Extracts keywords from job descriptions to find relevant questions
 - Matches against a MongoDB question bank with tag-based search and alias normalization
 - Falls back to OpenAI generation when the question bank has insufficient coverage
 
 ### AI-Generated Feedback
+
 - Full transcript analysis after each interview
 - Overall score (1-5) with summary assessment
 - Category breakdowns: Technical Knowledge, Communication, Problem Solving, Depth of Understanding
@@ -52,12 +57,14 @@ The platform supports two modes:
 - Downloadable PDF reports with cover page, executive summary, and detailed breakdown
 
 ### Mass Interview Campaigns
+
 - Create a session and share a unique join link with candidates
 - Each candidate gets their own adaptive interview instance
 - Dashboard view of all candidate results, scores, and transcripts
 - Individual PDF report generation per candidate
 
 ### Dashboard
+
 - View all interviews with status tracking (Scheduled / In Progress / Completed)
 - Search and filter by title, company, or status
 - Sort by date or name
@@ -68,16 +75,16 @@ The platform supports two modes:
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 14 (App Router), React 18, TypeScript |
-| Voice AI | Deepgram SDK (Nova-3 STT, Aura TTS, Agent API) |
-| LLM | OpenAI GPT-4o (interview logic, question generation, feedback) |
-| Database | MongoDB Atlas + Mongoose 9 |
+| Layer          | Technology                                                         |
+| -------------- | ------------------------------------------------------------------ |
+| Framework      | Next.js 14 (App Router), React 18, TypeScript                      |
+| Voice AI       | Deepgram SDK (Nova-3 STT, Aura TTS, Agent API)                     |
+| LLM            | OpenAI GPT-4o (interview logic, question generation, feedback)     |
+| Database       | MongoDB Atlas + Mongoose 9                                         |
 | Authentication | Clerk (sign-up/sign-in, session management, middleware protection) |
-| Styling | Tailwind CSS 3, SASS |
-| PDF Generation | PDFKit |
-| UI | Lucide React (icons), Sonner (toasts), Lottie (animations) |
+| Styling        | Tailwind CSS 3, SASS                                               |
+| PDF Generation | PDFKit                                                             |
+| UI             | Lucide React (icons), Sonner (toasts), Lottie (animations)         |
 
 ---
 
@@ -170,21 +177,21 @@ middleware.ts                     # Clerk route protection
 
 ### API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/interviews` | Create a new interview (generates questions + sampling plan) |
-| `GET` | `/api/interviews` | List all interviews for the authenticated user |
-| `GET` | `/api/interviews/[id]` | Get interview details |
-| `PATCH` | `/api/interviews/[id]` | Update interview (status, fields, feedback) |
-| `DELETE` | `/api/interviews/[id]` | Delete an interview |
-| `GET` | `/api/interviews/[id]/report` | Download PDF report |
-| `GET` | `/api/interviews/[id]/candidates` | List candidates for a mass interview |
-| `GET` | `/api/interviews/join/[token]` | Check join status for a mass interview |
-| `POST` | `/api/interviews/join/[token]` | Create a candidate session |
-| `GET` | `/api/candidate-sessions/[sessionId]` | Get candidate session details |
-| `PATCH` | `/api/candidate-sessions/[sessionId]` | Update candidate session |
-| `GET` | `/api/candidate-sessions/[sessionId]/report` | Download candidate PDF report |
-| `POST` | `/api/authenticate` | Get a Deepgram access token for WebSocket |
+| Method   | Endpoint                                     | Description                                                  |
+| -------- | -------------------------------------------- | ------------------------------------------------------------ |
+| `POST`   | `/api/interviews`                            | Create a new interview (generates questions + sampling plan) |
+| `GET`    | `/api/interviews`                            | List all interviews for the authenticated user               |
+| `GET`    | `/api/interviews/[id]`                       | Get interview details                                        |
+| `PATCH`  | `/api/interviews/[id]`                       | Update interview (status, fields, feedback)                  |
+| `DELETE` | `/api/interviews/[id]`                       | Delete an interview                                          |
+| `GET`    | `/api/interviews/[id]/report`                | Download PDF report                                          |
+| `GET`    | `/api/interviews/[id]/candidates`            | List candidates for a mass interview                         |
+| `GET`    | `/api/interviews/join/[token]`               | Check join status for a mass interview                       |
+| `POST`   | `/api/interviews/join/[token]`               | Create a candidate session                                   |
+| `GET`    | `/api/candidate-sessions/[sessionId]`        | Get candidate session details                                |
+| `PATCH`  | `/api/candidate-sessions/[sessionId]`        | Update candidate session                                     |
+| `GET`    | `/api/candidate-sessions/[sessionId]/report` | Download candidate PDF report                                |
+| `POST`   | `/api/authenticate`                          | Get a Deepgram access token for WebSocket                    |
 
 ---
 
@@ -200,12 +207,12 @@ middleware.ts                     # Clerk route protection
 
 You will need API keys from the following services:
 
-| Service | Purpose | Sign Up |
-|---|---|---|
-| **Deepgram** | Voice AI (STT + TTS + Agent API) | [console.deepgram.com](https://console.deepgram.com/signup?jump=keys) |
-| **OpenAI** | LLM for interview logic + feedback | [platform.openai.com](https://platform.openai.com/) |
-| **Clerk** | User authentication | [clerk.com](https://clerk.com/) |
-| **MongoDB Atlas** | Database | [mongodb.com/atlas](https://www.mongodb.com/atlas) |
+| Service           | Purpose                            | Sign Up                                                               |
+| ----------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| **Deepgram**      | Voice AI (STT + TTS + Agent API)   | [console.deepgram.com](https://console.deepgram.com/signup?jump=keys) |
+| **OpenAI**        | LLM for interview logic + feedback | [platform.openai.com](https://platform.openai.com/)                   |
+| **Clerk**         | User authentication                | [clerk.com](https://clerk.com/)                                       |
+| **MongoDB Atlas** | Database                           | [mongodb.com/atlas](https://www.mongodb.com/atlas)                    |
 
 ### Installation
 
@@ -282,6 +289,7 @@ This section covers everything you need to know to contribute to or extend the c
 ### Key Architectural Patterns
 
 **Adaptive Interview Algorithm** — The core interview logic lives in three files:
+
 - `lib/scoring.ts` — ranks candidate questions by topic relevance and difficulty fit, applies diversity penalty
 - `lib/sampling.ts` — builds the difficulty distribution plan, orchestrates `selectNextQuestion()`
 - `lib/questionSelection.ts` — queries the question bank, extracts keywords, normalizes tags
@@ -289,6 +297,7 @@ This section covers everything you need to know to contribute to or extend the c
 The adaptive loop works client-side: Deepgram's agent calls `get_next_question` as a function call, the client intercepts it, runs `selectNextQuestion()` locally, and returns the next question text to the agent. This avoids a server round-trip for each question.
 
 **Function Calling** — The voice agent uses two client-side function definitions:
+
 - `get_next_question` — receives LLM analysis of the last answer, returns the next question or `{ action: "end" }`
 - `end_interview` — signals the client to close the session and generate feedback
 
@@ -329,6 +338,7 @@ The seed script reads from `scripts/data/combined_2.json` and assigns difficulty
 ### Route Protection
 
 Authentication is handled by Clerk middleware in `middleware.ts`:
+
 - **Public routes**: `/`, `/sign-in(.*)`, `/sign-up(.*)`
 - **Everything else** (dashboard, API routes, interview pages) requires authentication
 - The `/join/[token]` route requires authentication but is accessible to any Clerk user (not just the interview creator)

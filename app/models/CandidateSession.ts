@@ -57,18 +57,12 @@ const candidateSessionSchema = new Schema<ICandidateSession>(
 );
 
 // One attempt per candidate per interview
-candidateSessionSchema.index(
-  { interviewId: 1, candidateUserId: 1 },
-  { unique: true },
-);
+candidateSessionSchema.index({ interviewId: 1, candidateUserId: 1 }, { unique: true });
 // Fast listing for creator's candidates page
 candidateSessionSchema.index({ interviewId: 1, createdAt: -1 });
 
 const CandidateSession =
   (mongoose.models.CandidateSession as mongoose.Model<ICandidateSession>) ||
-  mongoose.model<ICandidateSession>(
-    "CandidateSession",
-    candidateSessionSchema,
-  );
+  mongoose.model<ICandidateSession>("CandidateSession", candidateSessionSchema);
 
 export default CandidateSession;

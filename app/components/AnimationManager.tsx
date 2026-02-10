@@ -34,7 +34,7 @@ const AnimationManager: FC<Props> = ({
   onOrbClick,
 }: Props) => {
   const canvasContainer = useRef<HTMLButtonElement>(null);
-  const size = useSize(canvasContainer);
+  const size = useSize(canvasContainer as React.RefObject<HTMLButtonElement>);
 
   const [agentVolume, setAgentVolume] = useState(0);
   const [userVolume, setUserVolume] = useState(0);

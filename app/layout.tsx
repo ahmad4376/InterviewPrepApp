@@ -26,7 +26,8 @@ const favorit = localFont({
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_PATH || "http://localhost:3000"),
   title: "InterviewPrepApp",
-  description: "AI-powered interview preparation — practice with real questions, get instant feedback, and land your dream job.",
+  description:
+    "AI-powered interview preparation — practice with real questions, get instant feedback, and land your dream job.",
 };
 
 const fonts = [inter, fira, favorit].map((font) => font.variable).join(" ");

@@ -38,12 +38,9 @@ export default async function CreatorCandidateFeedbackPage({
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">
-            {session.candidateName as string}
-          </h1>
+          <h1 className="text-2xl font-bold text-white">{session.candidateName as string}</h1>
           <p className="text-gray-400 text-sm">
-            {session.candidateEmail as string}{" "}
-            {session.candidateEmail ? "\u00B7 " : ""}
+            {session.candidateEmail as string} {session.candidateEmail ? "\u00B7 " : ""}
             {new Date(session.createdAt as Date).toLocaleDateString()}
           </p>
         </div>

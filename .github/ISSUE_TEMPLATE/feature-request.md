@@ -1,10 +1,9 @@
 ---
 name: Feature Request
 about: I think X would be a cool addition or change.
-title: ''
+title: ""
 labels: "✨ enhancement"
-assignees: ''
-
+assignees: ""
 ---
 
 ## Proposed changes

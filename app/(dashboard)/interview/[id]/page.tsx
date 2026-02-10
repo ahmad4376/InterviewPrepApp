@@ -25,9 +25,7 @@ export default async function InterviewSessionPage({
     notFound();
   }
 
-  const questions = (
-    interview.questions as { text: string; topic: string }[]
-  ).map((q) => ({
+  const questions = (interview.questions as { text: string; topic: string }[]).map((q) => ({
     text: q.text,
     topic: q.topic,
   }));

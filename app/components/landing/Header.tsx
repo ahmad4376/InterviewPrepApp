@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link";
 import {
   SignedIn,
   SignedOut,
@@ -6,8 +6,8 @@ import {
   SignUpButton,
   SignOutButton,
   UserButton,
-} from '@clerk/nextjs'
-import Logo from './Logo'
+} from "@clerk/nextjs";
+import Logo from "./Logo";
 
 export default function Header() {
   return (
@@ -16,7 +16,9 @@ export default function Header() {
         <div className="flex flex-1 items-center">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
-            <span className="text-white text-base font-semibold tracking-wide">InterviewPrepApp</span>
+            <span className="text-white text-base font-semibold tracking-wide">
+              InterviewPrepApp
+            </span>
           </Link>
         </div>
 
@@ -30,7 +32,9 @@ export default function Header() {
 
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="text-gray-300 hover:text-white text-sm font-medium">Sign in</button>
+              <button className="text-gray-300 hover:text-white text-sm font-medium">
+                Sign in
+              </button>
             </SignInButton>
 
             <SignUpButton mode="modal">
@@ -42,5 +46,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }

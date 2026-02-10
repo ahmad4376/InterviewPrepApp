@@ -8,11 +8,7 @@ function StarRating({ score, max = 5 }: { score: number; max?: number }) {
         <Star
           key={i}
           size={18}
-          className={
-            i < Math.round(score)
-              ? "fill-[#3ecf8e] text-[#3ecf8e]"
-              : "text-gray-600"
-          }
+          className={i < Math.round(score) ? "fill-[#3ecf8e] text-[#3ecf8e]" : "text-gray-600"}
         />
       ))}
       <span className="ml-2 text-sm text-gray-400">{score.toFixed(1)}/5</span>
@@ -27,16 +23,10 @@ function LargeStarRating({ score }: { score: number }) {
         <Star
           key={i}
           size={32}
-          className={
-            i < Math.round(score)
-              ? "fill-[#3ecf8e] text-[#3ecf8e]"
-              : "text-gray-600"
-          }
+          className={i < Math.round(score) ? "fill-[#3ecf8e] text-[#3ecf8e]" : "text-gray-600"}
         />
       ))}
-      <span className="ml-3 text-2xl font-bold text-white">
-        {score.toFixed(1)}
-      </span>
+      <span className="ml-3 text-2xl font-bold text-white">{score.toFixed(1)}</span>
       <span className="text-lg text-gray-400">/5</span>
     </div>
   );
@@ -46,19 +36,12 @@ function ScoreBar({ score, max = 5 }: { score: number; max?: number }) {
   const pct = (score / max) * 100;
   return (
     <div className="h-2 w-full rounded-full bg-white/10">
-      <div
-        className="h-2 rounded-full bg-[#3ecf8e]"
-        style={{ width: `${pct}%` }}
-      />
+      <div className="h-2 rounded-full bg-[#3ecf8e]" style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
-export default function FeedbackDisplay({
-  feedback,
-}: {
-  feedback: InterviewFeedback;
-}) {
+export default function FeedbackDisplay({ feedback }: { feedback: InterviewFeedback }) {
   return (
     <div className="space-y-6">
       {/* Overall Score */}
@@ -67,9 +50,7 @@ export default function FeedbackDisplay({
           Overall Score
         </h2>
         <LargeStarRating score={feedback.overallScore} />
-        <p className="text-gray-300 mt-4 leading-relaxed">
-          {feedback.summary}
-        </p>
+        <p className="text-gray-300 mt-4 leading-relaxed">{feedback.summary}</p>
       </div>
 
       {/* Category Scores */}
@@ -80,17 +61,11 @@ export default function FeedbackDisplay({
             className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-white font-semibold text-sm">
-                {cat.name}
-              </h3>
-              <span className="text-[#3ecf8e] font-bold text-sm">
-                {cat.score}/5
-              </span>
+              <h3 className="text-white font-semibold text-sm">{cat.name}</h3>
+              <span className="text-[#3ecf8e] font-bold text-sm">{cat.score}/5</span>
             </div>
             <ScoreBar score={cat.score} />
-            <p className="text-gray-400 text-sm mt-3 leading-relaxed">
-              {cat.feedback}
-            </p>
+            <p className="text-gray-400 text-sm mt-3 leading-relaxed">{cat.feedback}</p>
           </div>
         ))}
       </div>
@@ -103,19 +78,14 @@ export default function FeedbackDisplay({
           </h2>
           <div className="space-y-4">
             {feedback.questionFeedback.map((qf, i) => (
-              <div
-                key={i}
-                className="rounded-lg border border-white/5 bg-white/[0.02] p-4"
-              >
+              <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <p className="text-white text-sm font-medium flex-1">
                     Q{i + 1}: {qf.question}
                   </p>
                   <StarRating score={qf.score} />
                 </div>
-                <p className="text-gray-400 text-sm leading-relaxed">
-                  {qf.assessment}
-                </p>
+                <p className="text-gray-400 text-sm leading-relaxed">{qf.assessment}</p>
               </div>
             ))}
           </div>
@@ -131,10 +101,7 @@ export default function FeedbackDisplay({
           </h2>
           <ul className="space-y-2">
             {feedback.strengths.map((s, i) => (
-              <li
-                key={i}
-                className="text-gray-300 text-sm flex items-start gap-2"
-              >
+              <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
                 <span className="text-green-400 mt-0.5 shrink-0">+</span>
                 {s}
               </li>
@@ -149,10 +116,7 @@ export default function FeedbackDisplay({
           </h2>
           <ul className="space-y-2">
             {feedback.improvements.map((imp, i) => (
-              <li
-                key={i}
-                className="text-gray-300 text-sm flex items-start gap-2"
-              >
+              <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
                 <span className="text-amber-400 mt-0.5 shrink-0">&uarr;</span>
                 {imp}
               </li>

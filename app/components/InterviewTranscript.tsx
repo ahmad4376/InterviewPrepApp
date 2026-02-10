@@ -37,18 +37,10 @@ function useTypewriter(text: string, speed = 18, enabled = true): string {
   return text.slice(0, displayedLength);
 }
 
-function MessageBubble({
-  message,
-  isLatest,
-}: {
-  message: ConversationMessage;
-  isLatest: boolean;
-}) {
+function MessageBubble({ message, isLatest }: { message: ConversationMessage; isLatest: boolean }) {
   const isUser = isUserMessage(message);
   const shouldAnimate = isLatest && !isUser;
-  const rawText = isUser
-    ? message.user || "(inaudible)"
-    : (message as AssistantMessage).assistant;
+  const rawText = isUser ? message.user || "(inaudible)" : (message as AssistantMessage).assistant;
   const displayText = useTypewriter(rawText, 18, shouldAnimate);
 
   return (
@@ -136,8 +128,7 @@ export default function InterviewTranscript() {
 
     const interval = setInterval(() => {
       const isNearBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight <
-        60;
+        container.scrollHeight - container.scrollTop - container.clientHeight < 60;
       if (isNearBottom) {
         container.scrollTop = container.scrollHeight;
       }

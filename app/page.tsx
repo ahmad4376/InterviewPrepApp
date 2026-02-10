@@ -1,8 +1,8 @@
-import Header from './components/landing/Header'
-import Hero from './components/landing/Hero'
-import Features from './components/landing/Features'
-import CTA from './components/landing/CTA'
-import GlobalGradient from './components/landing/GlobalGradient'
+import Header from "./components/landing/Header";
+import Hero from "./components/landing/Hero";
+import Features from "./components/landing/Features";
+import CTA from "./components/landing/CTA";
+import GlobalGradient from "./components/landing/GlobalGradient";
 
 export default function HomePage() {
   return (
@@ -15,5 +15,5 @@ export default function HomePage() {
         <CTA />
       </main>
     </div>
-  )
+  );
 }

@@ -10,10 +10,7 @@ function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,10 +35,7 @@ export async function GET(
 
 const ALLOWED_STATUSES = ["scheduled", "in-progress", "completed"] as const;
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -64,9 +58,12 @@ export async function PATCH(
     };
 
     if (
-      typeof title !== "string" || !title.trim() ||
-      typeof company !== "string" || !company.trim() ||
-      typeof description !== "string" || !description.trim()
+      typeof title !== "string" ||
+      !title.trim() ||
+      typeof company !== "string" ||
+      !company.trim() ||
+      typeof description !== "string" ||
+      !description.trim()
     ) {
       return NextResponse.json(
         { error: "Title, company, and description are all required" },
@@ -148,11 +145,7 @@ export async function PATCH(
     return NextResponse.json({ success: true, status: updated.status });
   }
 
-  const updated = await Interview.findOneAndUpdate(
-    { _id: id, userId },
-    { status },
-    { new: true },
-  );
+  const updated = await Interview.findOneAndUpdate({ _id: id, userId }, { status }, { new: true });
 
   if (!updated) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
@@ -161,10 +154,7 @@ export async function PATCH(
   return NextResponse.json({ success: true, status: updated.status });
 }
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

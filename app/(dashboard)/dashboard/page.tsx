@@ -160,7 +160,12 @@ function DashboardContent() {
     }
   };
 
-  const handleEditSaved = (updated: { _id: string; title: string; company: string; description: string }) => {
+  const handleEditSaved = (updated: {
+    _id: string;
+    title: string;
+    company: string;
+    description: string;
+  }) => {
     setInterviews((prev) =>
       prev.map((i) =>
         i._id === updated._id ? { ...i, title: updated.title, company: updated.company } : i,
@@ -176,9 +181,7 @@ function DashboardContent() {
       .filter((i) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
-        return (
-          i.title.toLowerCase().includes(q) || i.company.toLowerCase().includes(q)
-        );
+        return i.title.toLowerCase().includes(q) || i.company.toLowerCase().includes(q);
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -220,9 +223,7 @@ function DashboardContent() {
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur text-center">
           <h2 className="text-xl font-bold text-white mb-2">No interviews yet</h2>
-          <p className="text-gray-400 mb-6">
-            Create your first mock interview to get started.
-          </p>
+          <p className="text-gray-400 mb-6">Create your first mock interview to get started.</p>
           <Link
             href="/create-interview"
             className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-2.5 font-medium text-black transition hover:bg-[#33b87a]"
@@ -285,7 +286,10 @@ function DashboardContent() {
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <ChevronDown
+              size={14}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+            />
           </div>
         </div>
 
@@ -328,13 +332,13 @@ function DashboardContent() {
 
             return (
               <div key={interview._id}>
-                <div
-                  className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur flex items-center justify-between gap-4"
-                >
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
                       <h3 className="text-white font-semibold truncate">{interview.title}</h3>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}
+                      >
                         {status.label}
                       </span>
                       {interview.isMassInterview && (

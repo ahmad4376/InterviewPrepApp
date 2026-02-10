@@ -39,6 +39,4 @@ export interface AdaptiveState {
   topicsAsked: string[];
 }
 
-export type AdaptiveResult =
-  | { action: "ask"; question: IPoolQuestion }
-  | { action: "end" };
+export type AdaptiveResult = { action: "ask"; question: IPoolQuestion } | { action: "end" };

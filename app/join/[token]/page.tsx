@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -16,12 +16,8 @@ interface JoinInfo {
   error?: string;
 }
 
-export default function JoinPage({
-  params,
-}: {
-  params: { token: string };
-}) {
-  const { token } = params;
+export default function JoinPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const router = useRouter();
   const [info, setInfo] = useState<JoinInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,9 +79,7 @@ export default function JoinPage({
     return (
       <div className="max-w-md mx-auto">
         <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-          <h1 className="text-xl font-bold text-white mb-2">
-            Unable to Join
-          </h1>
+          <h1 className="text-xl font-bold text-white mb-2">Unable to Join</h1>
           <p className="text-gray-400">{error}</p>
         </div>
       </div>
@@ -99,16 +93,10 @@ export default function JoinPage({
       <div className="max-w-md mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
           <CheckCircle2 size={48} className="text-[#3ecf8e] mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-white mb-2">
-            Already Completed
-          </h1>
-          <p className="text-gray-400 mb-6">
-            You have already completed this interview.
-          </p>
+          <h1 className="text-xl font-bold text-white mb-2">Already Completed</h1>
+          <p className="text-gray-400 mb-6">You have already completed this interview.</p>
           <button
-            onClick={() =>
-              router.push(`/join/${token}/feedback/${info.sessionId}`)
-            }
+            onClick={() => router.push(`/join/${token}/feedback/${info.sessionId}`)}
             className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-2.5 font-medium text-black transition hover:bg-[#33b87a]"
           >
             View Feedback
@@ -123,17 +111,12 @@ export default function JoinPage({
     return (
       <div className="max-w-md mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-xl font-bold text-white mb-2">
-            Interview In Progress
-          </h1>
+          <h1 className="text-xl font-bold text-white mb-2">Interview In Progress</h1>
           <p className="text-gray-400 mb-6">
-            You have an interview session in progress. Resume where you left
-            off.
+            You have an interview session in progress. Resume where you left off.
           </p>
           <button
-            onClick={() =>
-              router.push(`/join/${token}/session/${info.sessionId}`)
-            }
+            onClick={() => router.push(`/join/${token}/session/${info.sessionId}`)}
             className="inline-flex items-center gap-2 rounded-lg bg-yellow-500/20 px-5 py-2.5 font-medium text-yellow-400 transition hover:bg-yellow-500/30"
           >
             Resume Interview
@@ -152,17 +135,12 @@ export default function JoinPage({
         <p className="text-gray-400 mb-4">{info.company}</p>
 
         {info.description && (
-          <p className="text-gray-300 text-sm mb-4 line-clamp-4">
-            {info.description}
-          </p>
+          <p className="text-gray-300 text-sm mb-4 line-clamp-4">{info.description}</p>
         )}
 
         <div className="rounded-lg bg-white/5 px-4 py-3 mb-6">
           <p className="text-sm text-gray-400">
-            <span className="text-white font-medium">
-              {info.totalQuestions}
-            </span>{" "}
-            questions prepared
+            <span className="text-white font-medium">{info.totalQuestions}</span> questions prepared
           </p>
         </div>
 

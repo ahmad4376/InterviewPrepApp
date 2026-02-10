@@ -79,10 +79,7 @@ const DIFFICULTY_ADJUSTMENTS: Record<ResponseQuality, number> = {
 };
 
 /** Calculate target difficulty based on sampling plan + quality adjustment */
-export function getTargetDifficulty(
-  planDifficulty: number,
-  quality: ResponseQuality,
-): number {
+export function getTargetDifficulty(planDifficulty: number, quality: ResponseQuality): number {
   const adj = DIFFICULTY_ADJUSTMENTS[quality] ?? 0;
   return Math.max(1, Math.min(5, planDifficulty + adj));
 }
@@ -118,8 +115,7 @@ export function scoreCandidate(
     }
   }
 
-  const tagCoverage =
-    question.tags.length > 0 ? matchCount / question.tags.length : 0;
+  const tagCoverage = question.tags.length > 0 ? matchCount / question.tags.length : 0;
   const topicCoverage =
     suggestedTopics.length > 0
       ? Math.min(matchCount, suggestedTopics.length) / suggestedTopics.length
@@ -130,8 +126,7 @@ export function scoreCandidate(
   const diffDist = Math.abs(question.difficulty_score - targetDifficulty);
   const difficultyScore = 1 - diffDist / 4;
 
-  const totalScore =
-    TOPIC_WEIGHT * topicScore + DIFFICULTY_WEIGHT * difficultyScore;
+  const totalScore = TOPIC_WEIGHT * topicScore + DIFFICULTY_WEIGHT * difficultyScore;
 
   return { question, topicScore, difficultyScore, totalScore };
 }

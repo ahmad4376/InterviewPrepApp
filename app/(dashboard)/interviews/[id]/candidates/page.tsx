@@ -4,15 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Users,
-  Star,
-  Copy,
-  Check,
-  Loader2,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowLeft, Users, Star, Copy, Check, Loader2, ArrowRight } from "lucide-react";
 
 interface CandidateRow {
   _id: string;
@@ -118,31 +110,42 @@ export default function CandidatesPage() {
       {candidates.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur text-center">
           <Users size={48} className="text-gray-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">
-            No candidates yet
-          </h2>
-          <p className="text-gray-400">
-            Share the invite link with candidates to get started.
-          </p>
+          <h2 className="text-xl font-bold text-white mb-2">No candidates yet</h2>
+          <p className="text-gray-400">Share the invite link with candidates to get started.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10">
-                <th scope="col" className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
                   Candidate
                 </th>
-                <th scope="col" className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
                   Status
                 </th>
-                <th scope="col" className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
                   Score
                 </th>
-                <th scope="col" className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
                   Date
                 </th>
-                <th scope="col" className="px-5 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-5 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider"
+                >
                   Action
                 </th>
               </tr>
@@ -153,13 +156,9 @@ export default function CandidatesPage() {
                 return (
                   <tr key={c._id} className="hover:bg-white/[0.02]">
                     <td className="px-5 py-4">
-                      <p className="text-white font-medium text-sm">
-                        {c.candidateName}
-                      </p>
+                      <p className="text-white font-medium text-sm">{c.candidateName}</p>
                       {c.candidateEmail && (
-                        <p className="text-gray-500 text-xs">
-                          {c.candidateEmail}
-                        </p>
+                        <p className="text-gray-500 text-xs">{c.candidateEmail}</p>
                       )}
                     </td>
                     <td className="px-5 py-4">
@@ -172,10 +171,7 @@ export default function CandidatesPage() {
                     <td className="px-5 py-4">
                       {c.overallScore !== null ? (
                         <div className="flex items-center gap-1">
-                          <Star
-                            size={14}
-                            className="fill-[#3ecf8e] text-[#3ecf8e]"
-                          />
+                          <Star size={14} className="fill-[#3ecf8e] text-[#3ecf8e]" />
                           <span className="text-white text-sm font-medium">
                             {c.overallScore.toFixed(1)}
                           </span>

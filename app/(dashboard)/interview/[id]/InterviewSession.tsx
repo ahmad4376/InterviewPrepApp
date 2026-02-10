@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { App } from "app/components/App";
 import { DeepgramContextProvider } from "app/context/DeepgramContextProvider";
 import { MicrophoneContextProvider } from "app/context/MicrophoneContextProvider";
-import {
-  VoiceBotProvider,
-  useVoiceBot,
-} from "app/context/VoiceBotContextProvider";
+import { VoiceBotProvider, useVoiceBot } from "app/context/VoiceBotContextProvider";
 import type { TranscriptEntry } from "app/models/Interview";
 import {
   buildAdaptiveInterviewConfig,
@@ -17,12 +14,7 @@ import {
 } from "app/lib/constants";
 import InterviewTranscript from "app/components/InterviewTranscript";
 import { selectNextQuestion } from "app/lib/sampling";
-import type {
-  AdaptiveState,
-  LlmAnalysis,
-  ResponseQuality,
-  NextAction,
-} from "app/lib/types";
+import type { AdaptiveState, LlmAnalysis, ResponseQuality, NextAction } from "app/lib/types";
 import { toast } from "sonner";
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
@@ -62,8 +54,8 @@ interface InterviewSessionProps {
   initialStatus: string;
   totalQuestions?: number;
   initialAdaptiveState?: AdaptiveState;
-  apiBasePath?: string;   // default: "/api/interviews"
-  backUrl?: string;       // default: "/dashboard"
+  apiBasePath?: string; // default: "/api/interviews"
+  backUrl?: string; // default: "/dashboard"
 }
 
 export default function InterviewSession({
@@ -82,22 +74,16 @@ export default function InterviewSession({
   const [hasStarted, setHasStarted] = useState(false);
   const [started, setStarted] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const [questionsAsked, setQuestionsAsked] = useState(
-    initialAdaptiveState?.questionsAsked ?? 0,
-  );
+  const [questionsAsked, setQuestionsAsked] = useState(initialAdaptiveState?.questionsAsked ?? 0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
-  const handleEndRef = useRef<() => Promise<void>>();
+  const handleEndRef = useRef<(() => Promise<void>) | null>(null);
 
   // Use adaptive config if we have adaptive state, otherwise fall back to legacy
   const isAdaptive = !!initialAdaptiveState;
 
   const stsConfig = isAdaptive
-    ? buildAdaptiveInterviewConfig(
-        title,
-        company,
-        totalQuestions || questions.length,
-      )
+    ? buildAdaptiveInterviewConfig(title, company, totalQuestions || questions.length)
     : buildInterviewConfig(questions, title, company);
 
   // Adaptive state stored in ref — survives re-renders, no DB calls during interview
@@ -134,15 +120,12 @@ export default function InterviewSession({
         // ignore non-JSON messages
       }
     },
-    [interviewId, hasStarted],
+    [interviewId, hasStarted, apiBasePath],
   );
 
   // Client-side function call handler — LLM provides analysis, we select from pool
   const handleFunctionCall = useCallback(
-    async (
-      funcName: string,
-      args: Record<string, unknown>,
-    ): Promise<Record<string, unknown>> => {
+    async (funcName: string, args: Record<string, unknown>): Promise<Record<string, unknown>> => {
       if (funcName === "end_interview") {
         // Small delay so the voice agent can finish speaking its farewell
         setTimeout(() => handleEndRef.current?.(), 3000);
@@ -160,14 +143,12 @@ export default function InterviewSession({
 
       // Parse LLM's structured analysis
       const analysis: LlmAnalysis = {
-        response_quality:
-          (args.response_quality as ResponseQuality) || "partial",
+        response_quality: (args.response_quality as ResponseQuality) || "partial",
         next_action: (args.next_action as NextAction) || "move_on",
         suggested_topics: Array.isArray(args.suggested_topics)
           ? (args.suggested_topics as string[])
           : [],
-        user_response_summary:
-          (args.user_response_summary as string) || "",
+        user_response_summary: (args.user_response_summary as string) || "",
       };
 
       // Select next question using LLM's analysis (pure JS, no DB)
@@ -218,12 +199,8 @@ export default function InterviewSession({
     return (
       <div className="max-w-2xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Interview Completed
-          </h1>
-          <p className="text-gray-400 mb-6">
-            This interview has already been completed.
-          </p>
+          <h1 className="text-2xl font-bold text-white mb-2">Interview Completed</h1>
+          <p className="text-gray-400 mb-6">This interview has already been completed.</p>
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
@@ -246,8 +223,8 @@ export default function InterviewSession({
           <p className="text-gray-400 mb-6">{company}</p>
           <p className="text-gray-300 text-sm mb-8">
             {displayQuestionCount} question
-            {displayQuestionCount !== 1 ? "s" : ""} prepared. Your browser will
-            ask for microphone access once you start.
+            {displayQuestionCount !== 1 ? "s" : ""} prepared. Your browser will ask for microphone
+            access once you start.
           </p>
           <button
             onClick={() => setStarted(true)}

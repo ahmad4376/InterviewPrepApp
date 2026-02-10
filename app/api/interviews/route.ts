@@ -134,7 +134,7 @@ export async function GET(_request: Request) {
     status: i.status,
     createdAt: i.createdAt,
     hasFeedback: !!i.feedback,
-    isMassInterview: !!(i.isMassInterview),
+    isMassInterview: !!i.isMassInterview,
     shareToken: i.shareToken ?? null,
   }));
 

@@ -34,12 +34,8 @@ export default async function CandidateFeedbackPage({
     return (
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Interview Feedback
-          </h1>
-          <p className="text-gray-400 mb-1">
-            Feedback is not yet available.
-          </p>
+          <h1 className="text-2xl font-bold text-white mb-2">Interview Feedback</h1>
+          <p className="text-gray-400 mb-1">Feedback is not yet available.</p>
           <p className="text-gray-500 text-sm mb-6">
             Feedback typically takes 10-15 seconds to generate.
           </p>
@@ -72,8 +68,7 @@ export default async function CandidateFeedbackPage({
             {(interview?.title as string) || "Interview Feedback"}
           </h1>
           <p className="text-gray-400 text-sm">
-            {(interview?.company as string) || ""}{" "}
-            {interview?.company ? "\u00B7 " : ""}
+            {(interview?.company as string) || ""} {interview?.company ? "\u00B7 " : ""}
             {new Date(session.createdAt as Date).toLocaleDateString()}
           </p>
         </div>

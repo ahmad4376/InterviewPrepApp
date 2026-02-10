@@ -48,10 +48,7 @@ export function buildSamplingPlan(totalQuestions: number): number[] {
  * Mutates state.pool in place (removes selected question).
  * Advances state.currentPlanIndex.
  */
-export function selectNextQuestion(
-  state: AdaptiveState,
-  analysis: LlmAnalysis,
-): AdaptiveResult {
+export function selectNextQuestion(state: AdaptiveState, analysis: LlmAnalysis): AdaptiveResult {
   // Check if we've asked enough questions
   if (state.questionsAsked >= state.totalQuestions) {
     return { action: "end" };
@@ -63,15 +60,9 @@ export function selectNextQuestion(
   }
 
   // Determine target difficulty from sampling plan + quality adjustment
-  const planIdx = Math.min(
-    state.currentPlanIndex,
-    state.samplingPlan.length - 1,
-  );
+  const planIdx = Math.min(state.currentPlanIndex, state.samplingPlan.length - 1);
   const planDifficulty = state.samplingPlan[planIdx] ?? 3;
-  const targetDifficulty = getTargetDifficulty(
-    planDifficulty,
-    analysis.response_quality,
-  );
+  const targetDifficulty = getTargetDifficulty(planDifficulty, analysis.response_quality);
 
   // Determine which topics to search for
   let searchTopics = analysis.suggested_topics;
@@ -85,16 +76,13 @@ export function selectNextQuestion(
   const ranked = rankCandidates(state.pool, searchTopics, targetDifficulty);
 
   // Apply topic diversity penalty and random jitter to break ties
-  const recentTopics = new Set(
-    (state.topicsAsked ?? []).slice(-3).map((t) => t.toLowerCase()),
-  );
+  const recentTopics = new Set((state.topicsAsked ?? []).slice(-3).map((t) => t.toLowerCase()));
   const REPEAT_PENALTY = 0.15;
   const JITTER_MAX = 0.05;
 
   const diversified = ranked.map((c) => {
     const primaryTag = (c.question.tags[0] ?? "").toLowerCase();
-    const penalty =
-      primaryTag && recentTopics.has(primaryTag) ? REPEAT_PENALTY : 0;
+    const penalty = primaryTag && recentTopics.has(primaryTag) ? REPEAT_PENALTY : 0;
     return {
       ...c,
       adjustedScore: c.totalScore - penalty + Math.random() * JITTER_MAX,
@@ -106,10 +94,7 @@ export function selectNextQuestion(
   let selected = diversified[0]?.question ?? null;
 
   // Fallback: if no topic match at all, pick by difficulty distance with randomization
-  if (
-    !selected ||
-    (searchTopics.length > 0 && (diversified[0]?.topicScore ?? 0) === 0)
-  ) {
+  if (!selected || (searchTopics.length > 0 && (diversified[0]?.topicScore ?? 0) === 0)) {
     const byDifficulty = [...state.pool].map((q) => ({
       q,
       dist: Math.abs(q.difficulty_score - targetDifficulty),
@@ -125,9 +110,7 @@ export function selectNextQuestion(
   }
 
   // Remove selected question from pool
-  const idx = state.pool.findIndex(
-    (q) => q.question_id === selected!.question_id,
-  );
+  const idx = state.pool.findIndex((q) => q.question_id === selected!.question_id);
   if (idx !== -1) {
     state.pool.splice(idx, 1);
   }
@@ -140,10 +123,7 @@ export function selectNextQuestion(
   }
 
   // Advance plan index
-  state.currentPlanIndex = Math.min(
-    state.currentPlanIndex + 1,
-    state.samplingPlan.length,
-  );
+  state.currentPlanIndex = Math.min(state.currentPlanIndex + 1, state.samplingPlan.length);
 
   return { action: "ask", question: selected };
 }

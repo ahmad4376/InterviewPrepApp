@@ -8,18 +8,80 @@ import Question from "app/models/Question";
 import type { IPoolQuestion } from "./types";
 
 const TECH_TERMS = [
-  "react", "react.js", "reactjs", "angular", "vue", "vuejs",
-  "javascript", "js", "typescript", "ts", "html", "css", "sass", "less",
-  "webpack", "vite", "rollup", "babel", "node", "express",
-  "performance", "optimization", "accessibility", "a11y", "wcag",
-  "testing", "unit", "integration", "jest", "mocha",
-  "ssr", "ssg", "server-side", "server side", "static site", "docker",
-  "kubernetes", "aws", "azure", "gcp", "cloud", "git", "github",
-  "rest", "graphql", "api", "redux", "zustand", "mobx",
-  "python", "django", "flask", "java", "spring", "go", "golang",
-  "rust", "c++", "sql", "nosql", "mongodb", "postgresql", "mysql",
-  "redis", "kafka", "rabbitmq", "microservices", "ci", "cd",
-  "devops", "terraform", "ansible", "nginx", "linux",
+  "react",
+  "react.js",
+  "reactjs",
+  "angular",
+  "vue",
+  "vuejs",
+  "javascript",
+  "js",
+  "typescript",
+  "ts",
+  "html",
+  "css",
+  "sass",
+  "less",
+  "webpack",
+  "vite",
+  "rollup",
+  "babel",
+  "node",
+  "express",
+  "performance",
+  "optimization",
+  "accessibility",
+  "a11y",
+  "wcag",
+  "testing",
+  "unit",
+  "integration",
+  "jest",
+  "mocha",
+  "ssr",
+  "ssg",
+  "server-side",
+  "server side",
+  "static site",
+  "docker",
+  "kubernetes",
+  "aws",
+  "azure",
+  "gcp",
+  "cloud",
+  "git",
+  "github",
+  "rest",
+  "graphql",
+  "api",
+  "redux",
+  "zustand",
+  "mobx",
+  "python",
+  "django",
+  "flask",
+  "java",
+  "spring",
+  "go",
+  "golang",
+  "rust",
+  "c++",
+  "sql",
+  "nosql",
+  "mongodb",
+  "postgresql",
+  "mysql",
+  "redis",
+  "kafka",
+  "rabbitmq",
+  "microservices",
+  "ci",
+  "cd",
+  "devops",
+  "terraform",
+  "ansible",
+  "nginx",
+  "linux",
 ];
 
 /**
@@ -27,37 +89,119 @@ const TECH_TERMS = [
  * is truly relevant to the job's technology stack (not just generic overlap).
  */
 const TECH_SPECIFIC = new Set([
-  "react", "reactjs", "angular", "vue", "vuejs",
-  "javascript", "js", "typescript", "ts", "html", "css", "sass", "less",
-  "webpack", "vite", "rollup", "babel", "node", "express",
-  "jest", "mocha",
-  "docker", "kubernetes",
-  "redux", "zustand", "mobx",
-  "python", "django", "flask", "java", "spring", "go", "golang",
-  "rust", "c++", "sql", "nosql", "mongodb", "postgresql", "mysql",
-  "redis", "kafka", "rabbitmq",
-  "terraform", "ansible", "nginx", "linux", "graphql",
-  "aws", "azure", "gcp",
+  "react",
+  "reactjs",
+  "angular",
+  "vue",
+  "vuejs",
+  "javascript",
+  "js",
+  "typescript",
+  "ts",
+  "html",
+  "css",
+  "sass",
+  "less",
+  "webpack",
+  "vite",
+  "rollup",
+  "babel",
+  "node",
+  "express",
+  "jest",
+  "mocha",
+  "docker",
+  "kubernetes",
+  "redux",
+  "zustand",
+  "mobx",
+  "python",
+  "django",
+  "flask",
+  "java",
+  "spring",
+  "go",
+  "golang",
+  "rust",
+  "c++",
+  "sql",
+  "nosql",
+  "mongodb",
+  "postgresql",
+  "mysql",
+  "redis",
+  "kafka",
+  "rabbitmq",
+  "terraform",
+  "ansible",
+  "nginx",
+  "linux",
+  "graphql",
+  "aws",
+  "azure",
+  "gcp",
 ]);
 
 const STOPWORDS = new Set([
-  "the", "and", "for", "with", "that", "this", "from", "have", "will",
-  "are", "you", "your", "our", "we", "a", "an", "to", "of", "in", "on",
-  "as", "is", "be", "by", "or", "it", "at", "role", "job", "description",
-  "responsible", "responsibilities", "experience", "required", "preferred",
-  "skills", "knowledge",
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "have",
+  "will",
+  "are",
+  "you",
+  "your",
+  "our",
+  "we",
+  "a",
+  "an",
+  "to",
+  "of",
+  "in",
+  "on",
+  "as",
+  "is",
+  "be",
+  "by",
+  "or",
+  "it",
+  "at",
+  "role",
+  "job",
+  "description",
+  "responsible",
+  "responsibilities",
+  "experience",
+  "required",
+  "preferred",
+  "skills",
+  "knowledge",
 ]);
 
 const GENERIC = new Set([
-  "frontend", "backend", "engineer", "developer", "application",
-  "applications", "web", "site", "sites", "build", "maintain",
-  "software", "senior", "junior", "lead", "team",
+  "frontend",
+  "backend",
+  "engineer",
+  "developer",
+  "application",
+  "applications",
+  "web",
+  "site",
+  "sites",
+  "build",
+  "maintain",
+  "software",
+  "senior",
+  "junior",
+  "lead",
+  "team",
 ]);
 
-export function extractKeywords(
-  jobTitle: string,
-  jobDescription: string,
-): string[] {
+export function extractKeywords(jobTitle: string, jobDescription: string): string[] {
   const text = `${jobTitle} ${jobDescription}`.toLowerCase();
 
   const tokens = text
@@ -70,10 +214,7 @@ export function extractKeywords(
   // Detect curated tech terms
   const detectedTech = new Set<string>();
   for (const term of TECH_TERMS) {
-    const re = new RegExp(
-      `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-      "i",
-    );
+    const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
     if (re.test(text)) detectedTech.add(term.replace(".", "").toLowerCase());
   }
 
@@ -93,9 +234,7 @@ export function extractKeywords(
 
   const extraKeywords = freqSorted.filter((k) => !GENERIC.has(k));
 
-  return Array.from(
-    new Set([...Array.from(detectedTech), ...extraKeywords]),
-  ).slice(0, 12);
+  return Array.from(new Set([...Array.from(detectedTech), ...extraKeywords])).slice(0, 12);
 }
 
 export async function selectQuestions(
@@ -124,10 +263,7 @@ export async function selectQuestions(
 
   // If no keywords, return top-ranked questions
   if (orClauses.length === 0) {
-    const fallback = await Question.find({})
-      .sort({ rank_value: -1 })
-      .limit(totalQuestions)
-      .lean();
+    const fallback = await Question.find({}).sort({ rank_value: -1 }).limit(totalQuestions).lean();
     return fallback.map(docToPoolQuestion);
   }
 
@@ -175,8 +311,7 @@ export async function selectQuestions(
   const withJitter = relevant.map((s) => ({ ...s, jitter: Math.random() }));
   withJitter.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    if ((b.rankKey || 0) !== (a.rankKey || 0))
-      return (b.rankKey || 0) - (a.rankKey || 0);
+    if ((b.rankKey || 0) !== (a.rankKey || 0)) return (b.rankKey || 0) - (a.rankKey || 0);
     return a.jitter - b.jitter;
   });
 
