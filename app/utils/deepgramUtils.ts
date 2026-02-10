@@ -61,14 +61,14 @@ export interface LlmFunction {
   name: string;
   description: string;
   parameters: LlmParameterObject | Record<string, never>;
-  endpoint: {
+  endpoint?: {
     url: string;
     headers: Record<string, string>;
     method: string;
   };
 }
 
-export type LlmParameter = LlmParameterScalar | LlmParameterObject;
+export type LlmParameter = LlmParameterScalar | LlmParameterObject | LlmParameterArray;
 
 export interface LlmParameterBase {
   type: string;
@@ -83,6 +83,12 @@ export interface LlmParameterObject extends LlmParameterBase {
 
 export interface LlmParameterScalar extends LlmParameterBase {
   type: "string" | "integer";
+  enum?: string[];
+}
+
+export interface LlmParameterArray extends LlmParameterBase {
+  type: "array";
+  items: LlmParameter;
 }
 
 export interface Voice {
@@ -101,10 +107,11 @@ export type DGMessage =
   | { type: "Settings"; audio: AudioConfig; agent: AgentConfig }
   | { type: "UpdatePrompt"; prompt: string }
   | { type: "UpdateSpeak"; speak: SpeakConfig }
-  | { type: "KeepAlive" };
+  | { type: "KeepAlive" }
+  | { type: "FunctionCallResponse"; id: string; name: string; content: string };
 
 export const withBasePath = (path: string): string => {
-  const basePath = nextConfig.basePath || "/";
+  const basePath = nextConfig.basePath || "";
   if (path === "/") return basePath;
 
   return basePath + path;

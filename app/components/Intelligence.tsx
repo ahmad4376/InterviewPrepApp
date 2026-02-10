@@ -220,8 +220,8 @@ const Intelligence: FC = () => {
             default:
               break;
           }
-        } catch (e) {
-          console.error("Failed to parse JSON from socket message event.");
+        } catch {
+          // Non-JSON message — ignore
         }
       }
     },

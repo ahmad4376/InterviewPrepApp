@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 import { Inter, Fira_Code } from "next/font/google";
 import localFont from "next/font/local";
-import { DeepgramContextProvider } from "./context/DeepgramContextProvider";
-import { MicrophoneContextProvider } from "./context/MicrophoneContextProvider";
-import { VoiceBotProvider } from "./context/VoiceBotContextProvider";
-import AnimatedBackground from "./components/AnimatedBackground";
+import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 
 import "./globals.css";
-import { sharedOpenGraphMetadata } from "./lib/constants";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,30 +25,21 @@ const favorit = localFont({
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_PATH || "http://localhost:3000"),
-  title: "Voice Agent | Deepgram",
-  description: "Meet Deepgram's Voice Agent API",
-  openGraph: sharedOpenGraphMetadata,
-  twitter: {
-    card: "summary_large_image",
-    site: "@DeepgramAI",
-    creator: "@DeepgramAI",
-  },
+  title: "InterviewPrepApp",
+  description: "AI-powered interview preparation — practice with real questions, get instant feedback, and land your dream job.",
 };
 
 const fonts = [inter, fira, favorit].map((font) => font.variable).join(" ");
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${fonts} font-inter`}>
-      <body>
-        <AnimatedBackground>
-          <VoiceBotProvider>
-            <MicrophoneContextProvider>
-              <DeepgramContextProvider>{children}</DeepgramContextProvider>
-            </MicrophoneContextProvider>
-          </VoiceBotProvider>
-        </AnimatedBackground>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${fonts} font-inter`}>
+        <body>
+          {children}
+          <Toaster theme="dark" position="bottom-right" richColors />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

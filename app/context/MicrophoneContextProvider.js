@@ -41,11 +41,8 @@ const MicrophoneContextProvider = ({ children }) => {
       setMicrophoneAudioContext(microphoneAudioContext);
       setProcessor(processor);
       setMicrophoneState(1);
-    } catch (err) {
-      console.error(err);
-      if (err.name !== "NotFoundError" && err.name !== "NotAllowedError") {
-        console.log(err.name);
-      }
+    } catch {
+      // Microphone access denied or not available
     }
   };
 

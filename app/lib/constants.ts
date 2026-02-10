@@ -25,31 +25,221 @@ const baseConfig = {
   experimental: true,
 };
 
+export interface InterviewQuestion {
+  text: string;
+  topic: string;
+}
+
+export function buildInterviewConfig(
+  questions: InterviewQuestion[],
+  title: string,
+  company: string,
+): StsConfig {
+  const numberedQuestions = questions
+    .map((q, i) => `${i + 1}. [${q.topic}] ${q.text}`)
+    .join("\n");
+
+  const prompt = `## Role
+You are a senior interviewer conducting a technical interview for the ${title} position at ${company}. Your name is Alex.
+
+## Behavior
+- You will ask the candidate exactly ${questions.length} questions, one at a time.
+- After each answer, give a brief acknowledgment (1 sentence max), then move on to the next question.
+- Do NOT give detailed feedback or evaluate answers during the interview.
+- Keep all your responses concise and voice-friendly — no walls of text.
+- Do not use abbreviations for units.
+
+## Questions
+${numberedQuestions}
+
+## Flow
+1. Greet the candidate briefly, then ask Question 1.
+2. After each answer, give a brief acknowledgment and ask the next question.
+3. After the final answer, wrap up the interview by thanking the candidate and letting them know the interview is complete.
+
+## Important
+- Only ask ONE question at a time. Wait for the candidate to finish answering before proceeding.
+- Do not ask follow-up questions or go off-topic.
+- After all ${questions.length} questions are answered, clearly signal the end of the interview.`;
+
+  const firstQuestion = questions[0]?.text ?? "Tell me about yourself.";
+  const greeting = `Hi there! I'm Alex, and I'll be your interviewer today for the ${title} position at ${company}. We'll go through ${questions.length} questions. Let's get started. ${firstQuestion}`;
+
+  return {
+    ...baseConfig,
+    agent: {
+      ...baseConfig.agent,
+      think: {
+        ...baseConfig.agent.think,
+        prompt,
+        functions: [],
+      },
+      greeting,
+    },
+  };
+}
+
+export function buildAdaptiveInterviewConfig(
+  title: string,
+  company: string,
+  totalQuestions: number,
+): StsConfig {
+  const prompt = `## Role
+You are a senior interviewer for the ${title} position at ${company}. Your name is Alex.
+
+## Behavior
+- You conduct a ${totalQuestions}-question adaptive interview.
+- You do NOT know any interview questions. You MUST call get_next_question every time you need
+  a question. You have no other way to obtain questions.
+- After the candidate confirms they are ready, call get_next_question to get the first question.
+  For the first call, use response_quality "good", next_action "move_on", suggested_topics [],
+  and user_response_summary "Candidate confirmed ready to begin".
+- After EVERY candidate answer (no exceptions), you MUST:
+  1. Give a brief, neutral acknowledgment (2-3 sentences).
+  2. Immediately call get_next_question with your assessment.
+  You must ALWAYS call get_next_question — never skip it, never ask a question without it.
+- Acknowledgment rules:
+  - NEVER evaluate, correct, or reveal whether the answer was right or wrong.
+  - NEVER provide the correct answer or add technical information the candidate didn't mention.
+  - NEVER say "That's correct", "Good answer", "Actually...", "Not quite..." or similar.
+  - NEVER answer your own questions.
+  - You may reference the topic they discussed or paraphrase their approach, but do NOT judge it.
+  - Do NOT end your acknowledgment with a question or a transition like "Let's move on" or
+    "Here's the next one" — just acknowledge, then call the function.
+- NEVER say "let me get the next question", "one moment", "hold on", or anything that suggests
+  you are loading a question. The conversation must flow naturally.
+- After get_next_question returns a question, read it naturally to the candidate as if you
+  already knew what to ask.
+
+## Quality Assessment Guide
+- "excellent": Candidate gave a thorough, correct, well-structured answer with relevant examples
+- "good": Candidate answered correctly but could have gone deeper or missed minor details
+- "partial": Candidate showed some understanding but had significant gaps or seemed uncertain
+- "poor": Candidate said they don't know, gave an incorrect answer, or was completely off-topic
+
+## Topic Suggestion Guide
+- When choosing "go_deeper": suggest topics related to the current question (e.g., if they partially answered a closures question, suggest "closures", "scope", "lexical-environment")
+- When choosing "move_on": suggest new topic areas the interview should explore (e.g., "async", "promises", "error-handling")
+- Use simple, lowercase topic keywords that describe technical concepts
+
+## Ending the Interview
+- When get_next_question returns { action: "end" }, thank the candidate warmly and professionally.
+  Let them know the interview is complete and wish them well. Example:
+  "That concludes our interview. Thank you for your thoughtful responses today — I enjoyed our
+   conversation. You'll be able to review your feedback shortly. Best of luck!"
+- After delivering the farewell, wait for the candidate to respond.
+- When the candidate says goodbye, acknowledges the end, or thanks you, call end_interview
+  to close the session automatically.
+- If the candidate explicitly asks to stop or end the interview at any point, acknowledge their
+  request professionally, then call end_interview.
+
+## Important
+- EVERY question you ask MUST come from calling get_next_question. If you ask a question without
+  calling the function first, the interview will malfunction.
+- Only ask ONE question at a time.
+- Keep responses concise and voice-friendly.
+- Do not use abbreviations for units.`;
+
+  const functions = [
+    {
+      name: "get_next_question",
+      description:
+        "Analyze the candidate's response and get the next interview question. You MUST assess how well they answered and suggest what topics to explore next.",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          response_quality: {
+            type: "string" as const,
+            enum: ["excellent", "good", "partial", "poor"],
+            description:
+              "How well the candidate answered. 'excellent' = thorough and correct, 'good' = mostly correct with minor gaps, 'partial' = some understanding but significant gaps, 'poor' = incorrect or said they don't know.",
+          },
+          next_action: {
+            type: "string" as const,
+            enum: ["move_on", "go_deeper"],
+            description:
+              "Whether to move to a new topic or dig deeper into the current area. Use 'go_deeper' when the candidate showed partial understanding worth probing. Use 'move_on' when the answer was clearly strong or clearly weak.",
+          },
+          suggested_topics: {
+            type: "array" as const,
+            items: { type: "string" as const, description: "A topic keyword" },
+            description:
+              "1-3 topic tags for the next question. Examples: 'closures', 'async', 'git', 'react', 'sql'. When 'go_deeper', suggest related topics. When 'move_on', suggest new areas.",
+          },
+          user_response_summary: {
+            type: "string" as const,
+            description:
+              "A brief 1-2 sentence summary of what the candidate said.",
+          },
+        },
+        required: [
+          "response_quality",
+          "next_action",
+          "suggested_topics",
+          "user_response_summary",
+        ],
+      },
+      // NO endpoint → client-side function call
+    },
+    {
+      name: "end_interview",
+      description:
+        "End the interview session. Call this when the candidate says goodbye, thanks you, or indicates they want to end the conversation.",
+      parameters: {} as Record<string, never>,
+      // NO endpoint → client-side function call
+    },
+  ];
+
+  const greeting = `Hello, and welcome. My name is Alex, and I'll be conducting your interview today for the ${title} position at ${company}. Thank you for taking the time to be here. Whenever you're ready, just let me know and we can begin.`;
+
+  return {
+    ...baseConfig,
+    agent: {
+      ...baseConfig.agent,
+      think: {
+        ...baseConfig.agent.think,
+        prompt,
+        functions,
+      },
+      greeting,
+    },
+  };
+}
+
 export const stsConfig: StsConfig = {
   ...baseConfig,
   agent: {
     ...baseConfig.agent,
     think: {
       ...baseConfig.agent.think,
-      prompt: `
-                ## Base instructions
-                You are a helpful voice assistant made by Deepgram's engineers.
-                Respond in a friendly, human, conversational manner.
-                YOU MUST answer in 1-2 sentences at most when the message is not empty.
-                Always reply to empty messages with an empty message.
-                Ask follow up questions.
-                Ask one question at a time.
-                Your messages should have no more than than 120 characters.
-                Do not use abbreviations for units.
-                Separate all items in a list with commas.
-                Keep responses unique and free of repetition.
-                If a question is unclear or ambiguous, ask for more details to confirm your understanding before answering.
-                If someone asks how you are, or how you are feeling, tell them.
-                Deepgram gave you a mouth and ears so you can take voice as an input. You can listen and speak.
-                Your name is Voicebot.
-                `,
+      prompt: `## Role
+You are a senior backend engineer conducting a technical interview. Your name is Alex.
+
+## Behavior
+- You will ask the candidate exactly 3 backend engineering questions, one at a time.
+- After each answer, give a brief acknowledgment (1 sentence max), then move on to the next question.
+- Do NOT give detailed feedback or evaluate answers during the interview.
+- Keep all your responses concise and voice-friendly — no walls of text.
+- Do not use abbreviations for units.
+
+## Question Topics
+1. System Design — e.g., designing a scalable service, caching strategy, or database choice.
+2. API Design — e.g., REST endpoint design, versioning, error handling patterns.
+3. Debugging / Optimization — e.g., diagnosing a slow endpoint, reducing latency, fixing a memory leak.
+
+## Flow
+1. Greet the candidate and ask Question 1.
+2. Listen to the answer. Give a brief acknowledgment, then ask Question 2.
+3. Listen to the answer. Give a brief acknowledgment, then ask Question 3.
+4. Listen to the answer. Wrap up the interview by thanking the candidate and letting them know the interview is complete.
+
+## Important
+- Only ask ONE question at a time. Wait for the candidate to finish answering before proceeding.
+- Do not ask follow-up questions or go off-topic.
+- After all 3 questions are answered, clearly signal the end of the interview.`,
       functions: [],
     },
+    greeting: "Hi there! I'm Alex, and I'll be your backend engineering interviewer today. We'll go through three technical questions. Let's get started. For the first question: How would you design a caching layer for a high-traffic REST API? What technologies would you consider and what trade-offs would you think about?",
   },
 };
 
@@ -112,10 +302,10 @@ export const availableVoices: NonEmptyArray<Voice> = [
 export const defaultVoice: Voice = availableVoices[0];
 
 export const sharedOpenGraphMetadata = {
-  title: "Voice Agent | Deepgram",
+  title: "InterviewPrepApp",
   type: "website",
   url: "/",
-  description: "Meet Deepgram's Voice Agent API",
+  description: "AI-powered interview preparation — practice with real questions, get instant feedback.",
 };
 
 export const latencyMeasurementQueryParam = "latency-measurement";

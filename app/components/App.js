@@ -2,7 +2,6 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
 
 import Transcript from "./Transcript";
 import { useDeepgram } from "../context/DeepgramContextProvider";
@@ -22,8 +21,10 @@ const AnimationManager = dynamic(() => import("./AnimationManager"), {
 export const App = ({
   defaultStsConfig,
   onMessageEvent = () => {},
+  onFunctionCall,
   requiresUserActionToInitialize = false,
   className = "",
+  showTranscript = true,
 }) => {
   const {
     status,
@@ -54,7 +55,6 @@ export const App = ({
   const previousVoice = usePrevious(voice);
   const previousPrompt = usePrevious(prompt);
   const scheduledAudioSources = useRef([]);
-  const pathname = usePathname();
 
   // AUDIO MANAGEMENT
   /**
@@ -107,8 +107,8 @@ export const App = ({
         if ("wakeLock" in navigator) {
           wakeLock = await navigator.wakeLock.request("screen");
         }
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Wake lock not available or not granted
       }
     };
 
@@ -143,10 +143,6 @@ export const App = ({
         sendSocketMessage(socket, combinedStsConfig);
         startMicrophone();
         startListening(true);
-        if (pathname === "/") {
-          // This is the "base" demo at /agent
-          toggleSleep();
-        }
       };
 
       socket.addEventListener("open", onOpen);
@@ -161,7 +157,7 @@ export const App = ({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [microphone, socket, microphoneState, defaultStsConfig, pathname]);
+  }, [microphone, socket, microphoneState, defaultStsConfig]);
 
   /**
    * Performs checks to ensure that the system is ready to proceed with setting up the data transmission
@@ -208,7 +204,6 @@ export const App = ({
           bufferAudio(event.data); // Process the ArrayBuffer data to play the audio
         }
       } else {
-        console.log(event?.data);
         // Handle other types of messages such as strings
         setData(event.data);
         onMessageEvent(event.data);
@@ -362,8 +357,40 @@ export const App = ({
           const latencyMessage = { tts_latency, ttt_latency, total_latency };
           addVoicebotMessage(latencyMessage);
         }
-      } catch (error) {
-        console.error(data, error);
+
+        /**
+         * Handle client-side function calls from Deepgram.
+         * When a function is defined without an endpoint, Deepgram sends
+         * FunctionCallRequest to the client for local handling.
+         */
+        if (parsedData.type === "FunctionCallRequest" && onFunctionCall) {
+          for (const func of parsedData.functions || []) {
+            if (func.client_side) {
+              (async () => {
+                let result;
+                try {
+                  const funcArgs = JSON.parse(func.arguments || "{}");
+                  result = await onFunctionCall(func.name, funcArgs);
+                } catch (err) {
+                  console.error(`[FunctionCall] Error handling ${func.name}:`, err);
+                  result = { error: "Function call failed", action: "end" };
+                }
+                try {
+                  sendSocketMessage(socket, {
+                    type: "FunctionCallResponse",
+                    id: func.id,
+                    name: func.name,
+                    content: JSON.stringify(result),
+                  });
+                } catch (sendErr) {
+                  console.error(`[FunctionCall] Failed to send response for ${func.name}:`, sendErr);
+                }
+              })();
+            }
+          }
+        }
+      } catch {
+        // Non-JSON message — ignore
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -451,11 +478,13 @@ export const App = ({
             </div>
           )}
           {/* Transcript Section */}
-          <div
-            className={`h-20 md:h-12 text-sm md:text-base mt-2 flex flex-col items-center text-gray-200 overflow-y-auto`}
-          >
-            {messages.length > 0 ? <Transcript /> : null}
-          </div>
+          {showTranscript && (
+            <div
+              className={`h-20 md:h-12 text-sm md:text-base mt-2 flex flex-col items-center text-gray-200 overflow-y-auto`}
+            >
+              {messages.length > 0 ? <Transcript /> : null}
+            </div>
+          )}
         </Fragment>
       )}
     </div>

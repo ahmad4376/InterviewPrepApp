@@ -4,6 +4,8 @@ import {
   type ConversationMessage,
   type LatencyMessage,
   type BehindTheScenesEvent,
+  type UserMessage,
+  type AssistantMessage,
 } from "./VoiceBotContextProvider";
 
 export const START_LISTENING = "start_listening";
@@ -37,8 +39,23 @@ export const voiceBotReducer = (state: VoiceBotState, action: VoiceBotAction) =>
       return { ...state, status: VoiceBotStatus.SLEEPING };
     case INCREMENT_SLEEP_TIMER:
       return { ...state, sleepTimer: state.sleepTimer + 1 };
-    case ADD_MESSAGE:
-      return { ...state, messages: [...state.messages, action.payload] };
+    case ADD_MESSAGE: {
+      const newMsg = action.payload;
+      const lastMsg = state.messages[state.messages.length - 1];
+      if (lastMsg) {
+        const isUserDup =
+          "user" in newMsg &&
+          "user" in lastMsg &&
+          (newMsg as UserMessage).user === (lastMsg as UserMessage).user;
+        const isAssistantDup =
+          "assistant" in newMsg &&
+          "assistant" in lastMsg &&
+          (newMsg as AssistantMessage).assistant ===
+            (lastMsg as AssistantMessage).assistant;
+        if (isUserDup || isAssistantDup) return state;
+      }
+      return { ...state, messages: [...state.messages, newMsg] };
+    }
     case SET_PARAMS_ON_COPY_URL:
       return { ...state, attachParamsToCopyUrl: action.payload };
     case ADD_BEHIND_SCENES_EVENT:

@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: "/agent",
-  redirects: () => [{ source: "/", destination: "/agent", permanent: false, basePath: false }],
-
+  experimental: {
+    serverComponentsExternalPackages: ["pdfkit"],
+  },
   images: {
     remotePatterns: [
       {

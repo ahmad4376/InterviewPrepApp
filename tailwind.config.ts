@@ -35,6 +35,10 @@ export default {
         green: {
           spring: "#13EF93",
         },
+        emerald: {
+          DEFAULT: "#3ecf8e",
+          hover: "#36be81",
+        },
       },
     },
   },

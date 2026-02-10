@@ -1,5 +1,5 @@
 {
-  "name": "deepgram-voicebot",
+  "name": "interview-prep-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,20 +10,29 @@
     "prettier": "prettier"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.37.3",
     "@deepgram/sdk": "^4.5.1",
     "@lottiefiles/react-lottie-player": "^3.5.3",
     "@react-hook/resize-observer": "^2.0.2",
+    "@types/pdfkit": "^0.17.4",
     "@uidotdev/usehooks": "^2.4.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
+    "mongoose": "^9.1.6",
     "next": "14.2.18",
+    "openai": "^6.18.0",
+    "pdfkit": "^0.17.2",
     "react": "^18",
     "react-device-detect": "^2.2.3",
     "react-dom": "^18",
-    "sass": "^1.77.8"
+    "sass": "^1.77.8",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@types/node": "20.14.10",
     "@types/react": "18.3.4",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",
     "eslint-config-next": "14.2.6",

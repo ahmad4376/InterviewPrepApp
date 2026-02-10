@@ -15,8 +15,6 @@ const DeepgramContextProvider = ({ children }) => {
 
   const connectToDeepgram = async () => {
     if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log("Max reconnect attempts reached.");
-      // we don't actually know this is a rate limit, but want to show this anyways
       setRateLimited(true);
       return;
     }
@@ -31,7 +29,6 @@ const DeepgramContextProvider = ({ children }) => {
     const onOpen = () => {
       setSocketState(1); // connected
       setReconnectAttempts(0); // reset reconnect attempts after a successful connection
-      console.log("WebSocket connected.");
       keepAlive.current = setInterval(sendKeepAliveMessage(newSocket), 10000);
     };
 
