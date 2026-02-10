@@ -86,7 +86,7 @@ export class AudioStreamPlayer {
     this.nextStartTime = 0;
     this.isFirstFlush = true;
     this.flushTimer = null;
-    this.minBufferSamples = Math.floor(sampleRate * 0.1);
+    this.minBufferSamples = Math.floor(sampleRate * 0.2);
     this.analyser.connect(this.audioContext.destination);
   }
 
@@ -118,7 +118,7 @@ export class AudioStreamPlayer {
 
     const currentTime = this.audioContext.currentTime;
     if (this.nextStartTime < currentTime) {
-      this.nextStartTime = currentTime + (this.isFirstFlush ? 0.1 : 0.05);
+      this.nextStartTime = currentTime + (this.isFirstFlush ? 0.2 : 0.1);
     }
     this.isFirstFlush = false;
 
