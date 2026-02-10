@@ -28,14 +28,16 @@ const MicrophoneContextProvider = ({ children }) => {
           channelCount: 1,
           volume: 1.0,
           echoCancellation: true,
-          noiseSuppression: false,
+          noiseSuppression: true,
+          autoGainControl: true,
           latency: 0,
         },
       });
 
       const microphoneAudioContext = new AudioContext();
+      await microphoneAudioContext.audioWorklet.addModule("/mic-processor.js");
       const microphone = microphoneAudioContext.createMediaStreamSource(stream);
-      const processor = microphoneAudioContext.createScriptProcessor(4096, 1, 1);
+      const processor = new AudioWorkletNode(microphoneAudioContext, "mic-processor");
 
       setMicrophone(microphone);
       setMicrophoneAudioContext(microphoneAudioContext);

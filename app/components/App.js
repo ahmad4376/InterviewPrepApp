@@ -8,7 +8,7 @@ import { useDeepgram } from "../context/DeepgramContextProvider";
 import { useMicrophone } from "../context/MicrophoneContextProvider";
 import { EventType, useVoiceBot, VoiceBotStatus } from "../context/VoiceBotContextProvider";
 import { AudioStreamPlayer } from "../utils/audioUtils";
-import { sendSocketMessage, sendMicToSocket } from "app/utils/deepgramUtils";
+import { sendSocketMessage, sendWorkletDataToSocket } from "app/utils/deepgramUtils";
 import { isMobile } from "react-device-detect";
 import { usePrevious } from "@uidotdev/usehooks";
 import { useStsQueryParams } from "app/hooks/UseStsQueryParams";
@@ -166,15 +166,15 @@ export const App = ({
     if (!socket) return;
     if (microphoneState !== 2) return;
     if (socketState !== 1) return;
-    processor.onaudioprocess = sendMicToSocket(socket);
+    processor.port.onmessage = sendWorkletDataToSocket(socket);
   }, [microphone, socket, microphoneState, socketState, processor]);
 
   useEffect(() => {
     if (!processor || socket?.readyState !== 1) return;
     if (status === VoiceBotStatus.SLEEPING) {
-      processor.onaudioprocess = null;
+      processor.port.onmessage = null;
     } else {
-      processor.onaudioprocess = sendMicToSocket(socket);
+      processor.port.onmessage = sendWorkletDataToSocket(socket);
     }
   }, [status, processor, socket]);
 

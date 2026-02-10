@@ -14,6 +14,12 @@ export const sendMicToSocket = (socket: WebSocket) => (event: AudioProcessingEve
   socket.send(audioDataToSend);
 };
 
+export const sendWorkletDataToSocket = (socket: WebSocket) => (event: MessageEvent) => {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(event.data);
+  }
+};
+
 export const sendSocketMessage = (socket: WebSocket, message: DGMessage) => {
   socket.send(JSON.stringify(message));
 };
