@@ -77,7 +77,7 @@ The platform supports two modes:
 
 | Layer          | Technology                                                         |
 | -------------- | ------------------------------------------------------------------ |
-| Framework      | Next.js 14 (App Router), React 18, TypeScript                      |
+| Framework      | Next.js 15 (App Router), React 19, TypeScript                      |
 | Voice AI       | Deepgram SDK (Nova-3 STT, Aura TTS, Agent API)                     |
 | LLM            | OpenAI GPT-4o (interview logic, question generation, feedback)     |
 | Database       | MongoDB Atlas + Mongoose 9                                         |
@@ -199,8 +199,8 @@ middleware.ts                     # Clerk route protection
 
 ### Prerequisites
 
-- [Node.js v20+](https://nodejs.org/) (recommend installing via [nvm](https://github.com/nvm-sh/nvm))
-- npm or yarn
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) + [VS Code Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) **(recommended)**
+- Or: [Node.js v20+](https://nodejs.org/) installed locally (via [nvm](https://github.com/nvm-sh/nvm))
 - A [MongoDB Atlas](https://www.mongodb.com/atlas) cluster (or local MongoDB instance)
 
 ### External Service Accounts
@@ -214,17 +214,36 @@ You will need API keys from the following services:
 | **Clerk**         | User authentication                | [clerk.com](https://clerk.com/)                                       |
 | **MongoDB Atlas** | Database                           | [mongodb.com/atlas](https://www.mongodb.com/atlas)                    |
 
-### Installation
+### Option A: Dev Container (Recommended)
+
+The fastest way to get started — provides a consistent Node 20 environment with all tools pre-configured.
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/ahmad4376/InterviewPrepApp.git
+cd InterviewPrepApp
+
+# 2. Create .env.local with your API keys (see Environment Variables below)
+
+# 3. Open in VS Code → click "Reopen in Container" when prompted
+#    (first time takes ~2 min to pull image and run npm install)
+
+# 4. Start the app
+npm run dev
+```
+
+### Option B: Local Setup
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ahmad4376/InterviewPrepApp.git
 cd InterviewPrepApp
 
 # Install dependencies
 npm install
-# or
-yarn install
+
+# Start the app
+npm run dev
 ```
 
 ### Environment Variables
@@ -250,6 +269,8 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 ```
 
+> `.env.local` is gitignored and never committed. Ask a team member for the shared dev keys.
+
 ### Seed the Question Bank (Optional)
 
 The app can generate questions via OpenAI on the fly, but for better relevance you can seed MongoDB with a pre-built question bank:
@@ -264,11 +285,9 @@ This imports questions from `scripts/data/combined_2.json` and assigns difficult
 
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
-Open the localhost URL shown in your terminal (typically `http://localhost:3000`).
+Open http://localhost:3000 in your browser.
 
 ---
 
@@ -278,7 +297,7 @@ This section covers everything you need to know to contribute to or extend the c
 
 ### Project Conventions
 
-- **Framework**: Next.js 14 App Router with a mix of server components and client components (`"use client"` directive)
+- **Framework**: Next.js 15 App Router with a mix of server components and client components (`"use client"` directive)
 - **Language**: TypeScript throughout, with a few legacy `.js` files in `context/` and `utils/`
 - **Styling**: Tailwind CSS utility classes. Global styles in `app/globals.css`. Green accent color (`#3ecf8e`) for primary actions.
 - **State management**: React Context + `useReducer` for voice bot state (see `VoiceBotContextProvider` and `VoiceBotReducer`)
@@ -312,11 +331,18 @@ npm run dev
 # Production build
 npm run build && npm start
 
+# Production build (Docker)
+docker build -t interview-prep-app .
+docker run -p 3000:3000 --env-file .env.local interview-prep-app
+
 # Lint check
 npm run lint
 
 # Format code
-npx prettier --write .
+npm run format
+
+# Type check
+npm run typecheck
 ```
 
 ### Database Seeding
