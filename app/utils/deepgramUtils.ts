@@ -1,5 +1,4 @@
 import { convertFloat32ToInt16, downsample } from "../utils/audioUtils";
-import nextConfig from "next.config.mjs";
 
 export const getAuthToken = async () => {
   const result = await (await fetch(withBasePath("/api/authenticate"), { method: "POST" })).json();
@@ -117,8 +116,5 @@ export type DGMessage =
   | { type: "FunctionCallResponse"; id: string; name: string; content: string };
 
 export const withBasePath = (path: string): string => {
-  const basePath = nextConfig.basePath || "";
-  if (path === "/") return basePath;
-
-  return basePath + path;
+  return path;
 };
