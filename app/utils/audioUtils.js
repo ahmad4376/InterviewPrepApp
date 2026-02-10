@@ -74,3 +74,75 @@ export const normalizeVolume = (analyzer, dataArray, normalizationFactor) => {
   const average = sum / dataArray.length;
   return Math.min(average / normalizationFactor, 1);
 };
+
+export class AudioStreamPlayer {
+  constructor(audioContext, analyser, sampleRate = 24000) {
+    this.audioContext = audioContext;
+    this.analyser = analyser;
+    this.sampleRate = sampleRate;
+    this.pendingChunks = [];
+    this.pendingSamples = 0;
+    this.scheduledSources = [];
+    this.nextStartTime = 0;
+    this.isFirstFlush = true;
+    this.flushTimer = null;
+    this.minBufferSamples = Math.floor(sampleRate * 0.1);
+    this.analyser.connect(this.audioContext.destination);
+  }
+
+  addChunk(arrayBuffer) {
+    const int16 = new Int16Array(arrayBuffer);
+    if (int16.length === 0) return;
+    this.pendingChunks.push(int16);
+    this.pendingSamples += int16.length;
+    if (this.pendingSamples >= this.minBufferSamples) {
+      this.flush();
+    } else if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => this.flush(), 100);
+    }
+  }
+
+  flush() {
+    if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
+    if (this.pendingChunks.length === 0) return;
+
+    const merged = new Int16Array(this.pendingSamples);
+    let offset = 0;
+    for (const chunk of this.pendingChunks) { merged.set(chunk, offset); offset += chunk.length; }
+    this.pendingChunks = [];
+    this.pendingSamples = 0;
+
+    const buffer = this.audioContext.createBuffer(1, merged.length, this.sampleRate);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < merged.length; i++) { channelData[i] = merged[i] / 32768; }
+
+    const currentTime = this.audioContext.currentTime;
+    if (this.nextStartTime < currentTime) {
+      this.nextStartTime = currentTime + (this.isFirstFlush ? 0.1 : 0.05);
+    }
+    this.isFirstFlush = false;
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.analyser);
+    source.start(this.nextStartTime);
+    this.nextStartTime += buffer.duration;
+    this.scheduledSources.push(source);
+
+    if (this.scheduledSources.length > 20) {
+      this.scheduledSources = this.scheduledSources.slice(-10);
+    }
+  }
+
+  clear() {
+    if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
+    this.pendingChunks = [];
+    this.pendingSamples = 0;
+    for (const source of this.scheduledSources) {
+      try { source.stop(); } catch (e) { /* already stopped */ }
+    }
+    this.scheduledSources = [];
+    this.isFirstFlush = true;
+    this.nextStartTime = 0;
+  }
+}

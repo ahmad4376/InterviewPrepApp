@@ -7,7 +7,7 @@ import Transcript from "./Transcript";
 import { useDeepgram } from "../context/DeepgramContextProvider";
 import { useMicrophone } from "../context/MicrophoneContextProvider";
 import { EventType, useVoiceBot, VoiceBotStatus } from "../context/VoiceBotContextProvider";
-import { createAudioBuffer, playAudioBuffer } from "../utils/audioUtils";
+import { AudioStreamPlayer } from "../utils/audioUtils";
 import { sendSocketMessage, sendMicToSocket } from "app/utils/deepgramUtils";
 import { isMobile } from "react-device-detect";
 import { usePrevious } from "@uidotdev/usehooks";
@@ -49,12 +49,11 @@ export const App = ({
   const audioContext = useRef(null);
   const agentVoiceAnalyser = useRef(null);
   const userVoiceAnalyser = useRef(null);
-  const startTimeRef = useRef(-1);
+  const audioStreamPlayer = useRef(null);
   const [data, setData] = useState();
   const [isInitialized, setIsInitialized] = useState(requiresUserActionToInitialize ? false : null);
   const previousVoice = usePrevious(voice);
   const previousPrompt = usePrevious(prompt);
-  const scheduledAudioSources = useRef([]);
 
   // AUDIO MANAGEMENT
   /**
@@ -69,6 +68,10 @@ export const App = ({
       agentVoiceAnalyser.current = audioContext.current.createAnalyser();
       agentVoiceAnalyser.current.fftSize = 2048;
       agentVoiceAnalyser.current.smoothingTimeConstant = 0.96;
+      audioStreamPlayer.current = new AudioStreamPlayer(
+        audioContext.current,
+        agentVoiceAnalyser.current,
+      );
     }
   }, []);
 
@@ -77,17 +80,11 @@ export const App = ({
    * Converts raw audio into an AudioBuffer and plays the processed audio through the web audio context
    */
   const bufferAudio = useCallback((data) => {
-    const audioBuffer = createAudioBuffer(audioContext.current, data);
-    if (!audioBuffer) return;
-    scheduledAudioSources.current.push(
-      playAudioBuffer(audioContext.current, audioBuffer, startTimeRef, agentVoiceAnalyser.current),
-    );
+    audioStreamPlayer.current?.addChunk(data);
   }, []);
 
   const clearAudioBuffer = () => {
-    scheduledAudioSources.current.forEach((source) => source.stop());
-    scheduledAudioSources.current = [];
-    startTimeRef.current = -1;
+    audioStreamPlayer.current?.clear();
   };
 
   // MICROPHONE AND SOCKET MANAGEMENT
