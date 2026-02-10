@@ -34,7 +34,7 @@ bankQuestionSchema.index({
 });
 
 const Question =
-  mongoose.models.Question ??
+  (mongoose.models.Question as mongoose.Model<IBankQuestion>) ||
   mongoose.model<IBankQuestion>("Question", bankQuestionSchema);
 
 export default Question;

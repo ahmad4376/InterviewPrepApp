@@ -98,7 +98,7 @@ interviewSchema.index({ userId: 1, createdAt: -1 });
 interviewSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
 
 const Interview =
-  mongoose.models.Interview ??
+  (mongoose.models.Interview as mongoose.Model<IInterview>) ||
   mongoose.model<IInterview>("Interview", interviewSchema);
 
 export default Interview;

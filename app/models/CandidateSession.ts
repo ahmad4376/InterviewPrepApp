@@ -65,7 +65,7 @@ candidateSessionSchema.index(
 candidateSessionSchema.index({ interviewId: 1, createdAt: -1 });
 
 const CandidateSession =
-  mongoose.models.CandidateSession ??
+  (mongoose.models.CandidateSession as mongoose.Model<ICandidateSession>) ||
   mongoose.model<ICandidateSession>(
     "CandidateSession",
     candidateSessionSchema,

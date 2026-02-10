@@ -106,7 +106,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      interviewId: interview._id as string,
+      interviewId: String(interview._id),
       questions: interview.questions as typeof displayQuestions,
       shareToken: (interview.shareToken as string | null) ?? undefined,
     },

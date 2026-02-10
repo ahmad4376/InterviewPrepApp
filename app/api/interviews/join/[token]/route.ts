@@ -118,7 +118,7 @@ export async function POST(
     });
 
     return NextResponse.json(
-      { sessionId: session._id as string },
+      { sessionId: String(session._id) },
       { status: 201 },
     );
   } catch (err) {
