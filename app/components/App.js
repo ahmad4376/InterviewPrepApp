@@ -107,8 +107,8 @@ export const App = ({
         if ("wakeLock" in navigator) {
           wakeLock = await navigator.wakeLock.request("screen");
         }
-      } catch {
-        // Wake lock not available or not granted
+      } catch (err) {
+        console.error(err);
       }
     };
 
@@ -204,6 +204,7 @@ export const App = ({
           bufferAudio(event.data); // Process the ArrayBuffer data to play the audio
         }
       } else {
+        console.log(event?.data);
         // Handle other types of messages such as strings
         setData(event.data);
         onMessageEvent(event.data);
@@ -389,8 +390,8 @@ export const App = ({
             }
           }
         }
-      } catch {
-        // Non-JSON message — ignore
+      } catch (error) {
+        console.error(data, error);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
