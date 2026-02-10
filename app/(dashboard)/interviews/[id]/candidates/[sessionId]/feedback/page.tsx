@@ -22,13 +22,13 @@ export default async function CreatorCandidateFeedbackPage({
   await connectDB();
 
   // Verify creator owns this interview
-  const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+  const interview = await Interview.findOne({ _id: id, userId }).lean();
   if (!interview) notFound();
 
   const session = await CandidateSession.findOne({
     _id: sessionId,
     interviewId: id,
-  } as Record<string, unknown>).lean();
+  }).lean();
   if (!session) notFound();
 
   const feedback = session.feedback as InterviewFeedback | null;

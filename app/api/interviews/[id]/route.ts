@@ -27,7 +27,7 @@ export async function GET(
 
   await connectDB();
 
-  const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+  const interview = await Interview.findOne({ _id: id, userId }).lean();
 
   if (!interview) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
@@ -76,7 +76,7 @@ export async function PATCH(
 
     await connectDB();
 
-    const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+    const interview = await Interview.findOne({ _id: id, userId }).lean();
     if (!interview) {
       return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
@@ -89,7 +89,7 @@ export async function PATCH(
     }
 
     await Interview.findOneAndUpdate(
-      { _id: id, userId } as Record<string, unknown>,
+      { _id: id, userId },
       { title: title.trim(), company: company.trim(), description: description.trim() },
     );
 
@@ -118,7 +118,7 @@ export async function PATCH(
 
   // If completing with transcript, generate feedback
   if (status === "completed" && Array.isArray(transcript) && transcript.length > 0) {
-    const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+    const interview = await Interview.findOne({ _id: id, userId }).lean();
     if (!interview) {
       return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
@@ -136,7 +136,7 @@ export async function PATCH(
     }
 
     const updated = await Interview.findOneAndUpdate(
-      { _id: id, userId } as Record<string, unknown>,
+      { _id: id, userId },
       { status, transcript, feedback },
       { new: true },
     );
@@ -149,7 +149,7 @@ export async function PATCH(
   }
 
   const updated = await Interview.findOneAndUpdate(
-    { _id: id, userId } as Record<string, unknown>,
+    { _id: id, userId },
     { status },
     { new: true },
   );
@@ -178,7 +178,7 @@ export async function DELETE(
 
   await connectDB();
 
-  const deleted = await Interview.findOneAndDelete({ _id: id, userId } as Record<string, unknown>);
+  const deleted = await Interview.findOneAndDelete({ _id: id, userId });
 
   if (!deleted) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });

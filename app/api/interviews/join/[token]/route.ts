@@ -21,7 +21,7 @@ export async function GET(
   const interview = await Interview.findOne({
     shareToken: token,
     isMassInterview: true,
-  } as Record<string, unknown>).lean();
+  }).lean();
 
   if (!interview) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
@@ -39,7 +39,7 @@ export async function GET(
   const existing = await CandidateSession.findOne({
     interviewId: interview._id,
     candidateUserId: userId,
-  } as Record<string, unknown>).lean();
+  }).lean();
 
   if (existing) {
     if ((existing.status as string) === "completed") {
@@ -80,7 +80,7 @@ export async function POST(
   const interview = await Interview.findOne({
     shareToken: token,
     isMassInterview: true,
-  } as Record<string, unknown>).lean();
+  }).lean();
 
   if (!interview) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
@@ -132,7 +132,7 @@ export async function POST(
       const existing = await CandidateSession.findOne({
         interviewId: interview._id,
         candidateUserId: userId,
-      } as Record<string, unknown>).lean();
+      }).lean();
 
       return NextResponse.json({
         sessionId: existing?._id,

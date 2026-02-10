@@ -19,7 +19,7 @@ export default async function InterviewSessionPage({
 
   await connectDB();
 
-  const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+  const interview = await Interview.findOne({ _id: id, userId }).lean();
 
   if (!interview) {
     notFound();

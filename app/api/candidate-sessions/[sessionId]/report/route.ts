@@ -54,7 +54,7 @@ export async function GET(
 
   await connectDB();
 
-  const session = await CandidateSession.findOne({ _id: sessionId } as Record<string, unknown>).lean();
+  const session = await CandidateSession.findOne({ _id: sessionId }).lean();
   if (!session) {
     return new Response(JSON.stringify({ error: "Session not found" }), {
       status: 404,
@@ -69,7 +69,7 @@ export async function GET(
     const interview = await Interview.findOne({
       _id: session.interviewId,
       userId,
-    } as Record<string, unknown>).lean();
+    }).lean();
     isCreator = !!interview;
   }
 
@@ -89,7 +89,7 @@ export async function GET(
   }
 
   // Fetch parent interview for title/company
-  const interview = await Interview.findOne({ _id: session.interviewId } as Record<string, unknown>)
+  const interview = await Interview.findOne({ _id: session.interviewId })
     .select("title company")
     .lean();
 

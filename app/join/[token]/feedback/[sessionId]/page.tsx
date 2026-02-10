@@ -21,10 +21,10 @@ export default async function CandidateFeedbackPage({
 
   await connectDB();
 
-  const session = await CandidateSession.findOne({ _id: sessionId } as Record<string, unknown>).lean();
+  const session = await CandidateSession.findOne({ _id: sessionId }).lean();
   if (!session || (session.candidateUserId as string) !== userId) notFound();
 
-  const interview = await Interview.findOne({ _id: session.interviewId } as Record<string, unknown>)
+  const interview = await Interview.findOne({ _id: session.interviewId })
     .select("title company")
     .lean();
 

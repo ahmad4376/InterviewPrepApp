@@ -19,7 +19,7 @@ export default async function FeedbackPage({
   if (!userId) notFound();
 
   await connectDB();
-  const interview = await Interview.findOne({ _id: id, userId } as Record<string, unknown>).lean();
+  const interview = await Interview.findOne({ _id: id, userId }).lean();
   if (!interview) notFound();
 
   const feedback = interview.feedback as InterviewFeedback | null;

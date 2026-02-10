@@ -31,7 +31,7 @@ export async function GET(
     _id: id,
     userId,
     isMassInterview: true,
-  } as Record<string, unknown>).lean();
+  }).lean();
 
   if (!interview) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });

@@ -21,11 +21,11 @@ export default async function CandidateSessionPage({
   const session = await CandidateSession.findOne({
     _id: sessionId,
     candidateUserId: userId,
-  } as Record<string, unknown>).lean();
+  }).lean();
 
   if (!session) notFound();
 
-  const interview = await Interview.findOne({ _id: session.interviewId } as Record<string, unknown>)
+  const interview = await Interview.findOne({ _id: session.interviewId })
     .select("title company")
     .lean();
 

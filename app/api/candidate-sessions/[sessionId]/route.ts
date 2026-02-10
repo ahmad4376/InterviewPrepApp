@@ -28,7 +28,7 @@ export async function GET(
 
   await connectDB();
 
-  const session = await CandidateSession.findOne({ _id: sessionId } as Record<string, unknown>).lean();
+  const session = await CandidateSession.findOne({ _id: sessionId }).lean();
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
@@ -40,7 +40,7 @@ export async function GET(
     const interview = await Interview.findOne({
       _id: session.interviewId,
       userId,
-    } as Record<string, unknown>).lean();
+    }).lean();
     isCreator = !!interview;
   }
 
@@ -95,7 +95,7 @@ export async function PATCH(
 
   // Generate feedback when completing with transcript
   if (status === "completed" && Array.isArray(transcript) && transcript.length > 0) {
-    const interview = await Interview.findOne({ _id: session.interviewId } as Record<string, unknown>).lean();
+    const interview = await Interview.findOne({ _id: session.interviewId }).lean();
     if (!interview) {
       return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
@@ -112,13 +112,13 @@ export async function PATCH(
     }
 
     await CandidateSession.findOneAndUpdate(
-      { _id: sessionId } as Record<string, unknown>,
+      { _id: sessionId },
       { status, transcript, feedback },
     );
 
     return NextResponse.json({ success: true, status });
   }
 
-  await CandidateSession.findOneAndUpdate({ _id: sessionId } as Record<string, unknown>, { status });
+  await CandidateSession.findOneAndUpdate({ _id: sessionId }, { status });
   return NextResponse.json({ success: true, status });
 }

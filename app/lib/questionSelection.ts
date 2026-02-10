@@ -124,7 +124,7 @@ export async function selectQuestions(
 
   // If no keywords, return top-ranked questions
   if (orClauses.length === 0) {
-    const fallback = await Question.find({} as Record<string, unknown>)
+    const fallback = await Question.find({})
       .sort({ rank_value: -1 })
       .limit(totalQuestions)
       .lean();
@@ -132,7 +132,7 @@ export async function selectQuestions(
   }
 
   // Fetch candidates
-  const candidates = await Question.find({ $or: orClauses } as Record<string, unknown>).limit(200).lean();
+  const candidates = await Question.find({ $or: orClauses }).limit(200).lean();
 
   // Identify which extracted keywords are technology-specific
   const techKeywords = keywords.filter((k) => TECH_SPECIFIC.has(k));
