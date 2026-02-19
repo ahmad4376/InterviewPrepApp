@@ -92,6 +92,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ to
       candidateUserId: userId,
       candidateName,
       candidateEmail,
+      jobLevel: interview.jobLevel ?? null,
       status: "scheduled",
       questionPool: interview.questionPool,
       samplingPlan: interview.samplingPlan,

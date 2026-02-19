@@ -90,11 +90,11 @@ You are a senior interviewer for the ${title} position at ${company}. Your name 
 - You do NOT know any interview questions. You MUST call get_next_question every time you need
   a question. You have no other way to obtain questions.
 - After the candidate confirms they are ready, call get_next_question to get the first question.
-  For the first call, use response_quality "good", next_action "move_on", suggested_topics [],
-  and user_response_summary "Candidate confirmed ready to begin".
+  For the first call, use scores { correctness: 3, depth: 3, communication: 3 }, next_action
+  "move_on", suggested_topics [], and user_response_summary "Candidate confirmed ready to begin".
 - After EVERY candidate answer (no exceptions), you MUST:
   1. Give a brief, neutral acknowledgment (2-3 sentences).
-  2. Immediately call get_next_question with your assessment.
+  2. Immediately call get_next_question with your scores and assessment.
   You must ALWAYS call get_next_question — never skip it, never ask a question without it.
 - Acknowledgment rules:
   - NEVER evaluate, correct, or reveal whether the answer was right or wrong.
@@ -107,13 +107,30 @@ You are a senior interviewer for the ${title} position at ${company}. Your name 
 - NEVER say "let me get the next question", "one moment", "hold on", or anything that suggests
   you are loading a question. The conversation must flow naturally.
 - After get_next_question returns a question, read it naturally to the candidate as if you
-  already knew what to ask.
+  already knew what to ask. The response includes an expectedAnswer — use it ONLY to score the
+  NEXT answer. NEVER reveal, hint at, or read the expected answer to the candidate.
 
-## Quality Assessment Guide
-- "excellent": Candidate gave a thorough, correct, well-structured answer with relevant examples
-- "good": Candidate answered correctly but could have gone deeper or missed minor details
-- "partial": Candidate showed some understanding but had significant gaps or seemed uncertain
-- "poor": Candidate said they don't know, gave an incorrect answer, or was completely off-topic
+## Scoring Rubric (INTERNAL — NEVER share with candidate)
+After each candidate answer, evaluate their response against the Expected Answer you received.
+Score each dimension 0-5:
+- correctness: How well the answer matches expected concepts. Synonyms and paraphrases count.
+  0=completely wrong, 1=mostly incorrect, 2=significant gaps, 3=some key concepts, 4=most concepts covered, 5=all key points
+- depth: How thoroughly they explained. Consider examples, tradeoffs, edge cases.
+  0=no detail, 3=adequate explanation, 5=expert-level detail
+- communication: How clearly they articulated their answer.
+  0=incoherent, 3=understandable, 5=perfectly structured
+
+If candidate says "not sure" / "skip" / "pass" / "don't know", score 0 on all dimensions.
+Be paraphrase-tolerant: the candidate does NOT need to use the exact words from the expected answer.
+After scoring, provide a brief rationale explaining why you gave those scores.
+Reference what the candidate got right, what they missed, and how their answer compared to the expected answer.
+
+## Follow-up Clarification
+When a candidate's answer is partially correct but vague (you'd score correctness ~2-3), you MAY
+set next_action to "clarify" to probe deeper on the SAME question. You can only do this ONCE per
+question. If get_next_question returns { action: "followup" }, use the clarificationPrompt to
+naturally ask the candidate to elaborate. After the follow-up response, re-score and call
+get_next_question with next_action "move_on" or "go_deeper" (NOT "clarify" again).
 
 ## Topic Suggestion Guide
 - When choosing "go_deeper": suggest topics related to the current question (e.g., if they partially answered a closures question, suggest "closures", "scope", "lexical-environment")
@@ -142,21 +159,35 @@ You are a senior interviewer for the ${title} position at ${company}. Your name 
     {
       name: "get_next_question",
       description:
-        "Analyze the candidate's response and get the next interview question. You MUST assess how well they answered and suggest what topics to explore next.",
+        "Score the candidate's answer against the expected answer and get the next interview question. You MUST provide numeric scores for correctness, depth, and communication.",
       parameters: {
         type: "object" as const,
         properties: {
-          response_quality: {
-            type: "string" as const,
-            enum: ["excellent", "good", "partial", "poor"],
+          scores: {
+            type: "object" as const,
             description:
-              "How well the candidate answered. 'excellent' = thorough and correct, 'good' = mostly correct with minor gaps, 'partial' = some understanding but significant gaps, 'poor' = incorrect or said they don't know.",
+              "Your scoring of the candidate's answer against the expected answer (0-5 each)",
+            properties: {
+              correctness: {
+                type: "number" as const,
+                description: "0-5: factual accuracy vs expected answer",
+              },
+              depth: {
+                type: "number" as const,
+                description: "0-5: thoroughness of explanation",
+              },
+              communication: {
+                type: "number" as const,
+                description: "0-5: clarity of articulation",
+              },
+            },
+            required: ["correctness", "depth", "communication"],
           },
           next_action: {
             type: "string" as const,
-            enum: ["move_on", "go_deeper"],
+            enum: ["move_on", "go_deeper", "clarify"],
             description:
-              "Whether to move to a new topic or dig deeper into the current area. Use 'go_deeper' when the candidate showed partial understanding worth probing. Use 'move_on' when the answer was clearly strong or clearly weak.",
+              "move_on: new topic. go_deeper: related topic. clarify: ask candidate to elaborate on same question (borderline answers only, max once).",
           },
           suggested_topics: {
             type: "array" as const,
@@ -168,8 +199,19 @@ You are a senior interviewer for the ${title} position at ${company}. Your name 
             type: "string" as const,
             description: "A brief 1-2 sentence summary of what the candidate said.",
           },
+          rationale: {
+            type: "string" as const,
+            description:
+              "1-3 sentence explanation of why you gave these scores. Reference specific parts of the candidate's answer compared to the expected answer.",
+          },
         },
-        required: ["response_quality", "next_action", "suggested_topics", "user_response_summary"],
+        required: [
+          "scores",
+          "next_action",
+          "suggested_topics",
+          "user_response_summary",
+          "rationale",
+        ],
       },
       // NO endpoint → client-side function call
     },

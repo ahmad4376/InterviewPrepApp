@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { TranscriptEntry, InterviewFeedback } from "app/models/Interview";
+import type { QuestionScore } from "./types";
 import type { IPoolQuestion } from "./types";
 
 export interface GeneratedQuestion {
@@ -282,6 +283,70 @@ Be specific and constructive. Reference actual answers from the transcript. Iden
     !Array.isArray(parsed.improvements)
   ) {
     throw new Error("Feedback response did not match expected format");
+  }
+
+  return parsed;
+}
+
+export async function generateScoreSummary(
+  questionScores: QuestionScore[],
+  jobTitle: string,
+  company: string,
+): Promise<{ summary: string; strengths: string[]; improvements: string[] }> {
+  const openai = getClient();
+
+  const scoreLines = questionScores
+    .map(
+      (qs, i) =>
+        `Q${i + 1}: "${qs.questionText}" — correctness=${qs.scores.correctness}, depth=${qs.scores.depth}, communication=${qs.scores.communication}, overall=${qs.overallScore.toFixed(2)} (${qs.category})`,
+    )
+    .join("\n");
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert interview coach. Based on the per-question scores from a "${jobTitle}" interview at "${company}", provide a brief assessment.
+
+Return JSON in this exact format:
+{
+  "summary": "<2-3 sentence overall assessment based on score patterns>",
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "improvements": ["<area 1>", "<area 2>"]
+}
+
+Guidelines:
+- summary: Reference specific score patterns (e.g., "consistently strong correctness but limited depth")
+- strengths: 2-4 areas where scores were consistently high (>=3.5)
+- improvements: 2-4 areas where scores were consistently low (<3.0)
+- Be specific and constructive. Reference question topics where relevant.`,
+      },
+      {
+        role: "user",
+        content: scoreLines,
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error("OpenAI returned an empty response for score summary");
+  }
+
+  const parsed = JSON.parse(content) as {
+    summary: string;
+    strengths: string[];
+    improvements: string[];
+  };
+
+  if (
+    typeof parsed.summary !== "string" ||
+    !Array.isArray(parsed.strengths) ||
+    !Array.isArray(parsed.improvements)
+  ) {
+    throw new Error("Score summary response did not match expected format");
   }
 
   return parsed;

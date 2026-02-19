@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
-import { generateFeedback } from "app/lib/openai";
+import { generateFeedback, generateScoreSummary } from "app/lib/openai";
+import type { QuestionScore } from "app/lib/types";
 import Interview from "app/models/Interview";
 import type { TranscriptEntry } from "app/models/Interview";
 
@@ -99,9 +100,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   // Status update path
-  const { status, transcript } = body as {
+  const { status, transcript, questionScores } = body as {
     status: string;
     transcript?: TranscriptEntry[];
+    questionScores?: QuestionScore[];
   };
 
   if (!ALLOWED_STATUSES.includes(status as (typeof ALLOWED_STATUSES)[number])) {
@@ -121,15 +123,53 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     let feedback = null;
-    try {
-      feedback = await generateFeedback(
-        transcript,
-        interview.title as string,
-        interview.company as string,
-      );
-    } catch (err) {
-      console.error("Feedback generation failed:", err);
-      // Still save transcript and status even if feedback fails
+
+    // New path: per-question scores available → lightweight summary
+    if (Array.isArray(questionScores) && questionScores.length > 0) {
+      try {
+        const overallScore =
+          questionScores.reduce((sum, qs) => sum + qs.overallScore, 0) / questionScores.length;
+        const aggregateScores = {
+          correctness:
+            questionScores.reduce((sum, qs) => sum + qs.scores.correctness, 0) /
+            questionScores.length,
+          depth:
+            questionScores.reduce((sum, qs) => sum + qs.scores.depth, 0) / questionScores.length,
+          communication:
+            questionScores.reduce((sum, qs) => sum + qs.scores.communication, 0) /
+            questionScores.length,
+        };
+
+        const llmSummary = await generateScoreSummary(
+          questionScores,
+          interview.title as string,
+          interview.company as string,
+        );
+
+        feedback = {
+          overallScore,
+          summary: llmSummary.summary,
+          aggregateScores,
+          questionScores,
+          strengths: llmSummary.strengths,
+          improvements: llmSummary.improvements,
+        };
+      } catch (err) {
+        console.error("Score summary generation failed:", err);
+      }
+    }
+
+    // Legacy fallback: no per-question scores → full transcript analysis
+    if (!feedback) {
+      try {
+        feedback = await generateFeedback(
+          transcript,
+          interview.title as string,
+          interview.company as string,
+        );
+      } catch (err) {
+        console.error("Feedback generation failed:", err);
+      }
     }
 
     const updated = await Interview.findOneAndUpdate(

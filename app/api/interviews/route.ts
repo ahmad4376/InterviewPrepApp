@@ -7,7 +7,9 @@ import { buildSamplingPlan } from "app/lib/sampling";
 import Interview from "app/models/Interview";
 import type { IPoolQuestion } from "app/lib/types";
 
-const TOTAL_QUESTIONS = 5;
+const DEFAULT_QUESTIONS = 5;
+const MAX_QUESTIONS = 20;
+const POOL_MULTIPLIER = 4;
 const MIN_DB_QUESTIONS = 3;
 
 export async function POST(request: Request) {
@@ -46,6 +48,20 @@ export async function POST(request: Request) {
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
 
+  // Validate jobLevel
+  const VALID_JOB_LEVELS = ["associate", "junior", "mid", "senior", "lead"];
+  const rawJobLevel = (body as { jobLevel?: string }).jobLevel;
+  const jobLevel =
+    typeof rawJobLevel === "string" && VALID_JOB_LEVELS.includes(rawJobLevel) ? rawJobLevel : "mid";
+
+  // Validate numQuestions
+  const rawNumQuestions = (body as { numQuestions?: unknown }).numQuestions;
+  const numQuestions = Math.max(
+    1,
+    Math.min(MAX_QUESTIONS, Math.round(Number(rawNumQuestions) || DEFAULT_QUESTIONS)),
+  );
+  const poolSize = numQuestions * POOL_MULTIPLIER;
+
   if (!title.trim() || !company.trim() || !description.trim()) {
     return NextResponse.json(
       { error: "title, company, and description must not be empty" },
@@ -53,11 +69,11 @@ export async function POST(request: Request) {
     );
   }
 
-  // Fetch questions from DB
+  // Fetch questions from DB (pool is larger than what we'll ask)
   let questionPool: IPoolQuestion[] = [];
   try {
-    questionPool = await selectQuestions(title, description, TOTAL_QUESTIONS);
-    console.log(`Selected ${questionPool.length} questions from DB`);
+    questionPool = await selectQuestions(title, description, poolSize);
+    console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
   } catch (err) {
     console.error("DB question selection failed, falling back to OpenAI:", err);
   }
@@ -67,13 +83,16 @@ export async function POST(request: Request) {
     console.log(
       `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
     );
-    questionPool = await generatePoolQuestions(title, description, TOTAL_QUESTIONS);
+    questionPool = await generatePoolQuestions(title, description, poolSize);
   }
 
-  const totalQuestions = Math.min(TOTAL_QUESTIONS, questionPool.length);
+  const totalQuestions = Math.min(numQuestions, questionPool.length);
 
-  // Build sampling plan
-  const samplingPlan = buildSamplingPlan(totalQuestions);
+  // Build sampling plan using job level
+  const samplingPlan = buildSamplingPlan(
+    totalQuestions,
+    jobLevel as "associate" | "junior" | "mid" | "senior" | "lead",
+  );
 
   // Build display questions (simplified) from the pool
   const displayQuestions = questionPool.slice(0, totalQuestions).map((q) => ({
@@ -88,6 +107,7 @@ export async function POST(request: Request) {
     title,
     company,
     description,
+    jobLevel,
     questions: displayQuestions,
     status: "scheduled",
     // Adaptive state

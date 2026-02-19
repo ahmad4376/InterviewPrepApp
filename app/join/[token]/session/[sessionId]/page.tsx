@@ -5,6 +5,7 @@ import CandidateSession from "app/models/CandidateSession";
 import Interview from "app/models/Interview";
 import InterviewSession from "app/(dashboard)/interview/[id]/InterviewSession";
 import type { AdaptiveState, IPoolQuestion } from "app/lib/types";
+import { bucketByDifficulty } from "app/lib/sampling";
 
 export default async function CandidateSessionPage({
   params,
@@ -30,18 +31,22 @@ export default async function CandidateSessionPage({
     .lean();
 
   const pool = (session.questionPool as IPoolQuestion[]) || [];
+  const buckets = bucketByDifficulty(pool);
   const currentQId = (session.currentQuestionId as string) || null;
 
   const initialAdaptiveState: AdaptiveState = {
-    pool,
+    buckets,
     samplingPlan: (session.samplingPlan as number[]) || [],
     currentPlanIndex: (session.currentPlanIndex as number) || 0,
     questionsAsked: (session.questionsAsked as number) || 0,
     totalQuestions: (session.totalQuestions as number) || 0,
     currentQuestionId: currentQId,
+    currentQuestionText: (session.currentQuestionText as string) || "",
     currentExpectedAnswer: (session.currentExpectedAnswer as string) || "",
     currentQuestionTags: [],
     topicsAsked: [],
+    followupUsedForCurrentQuestion: false,
+    questionScores: [],
   };
 
   return (

@@ -87,7 +87,7 @@ export interface LlmParameterObject extends LlmParameterBase {
 }
 
 export interface LlmParameterScalar extends LlmParameterBase {
-  type: "string" | "integer";
+  type: "string" | "integer" | "number";
   enum?: string[];
 }
 

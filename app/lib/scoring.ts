@@ -3,7 +3,7 @@
  * Client-compatible — no server-only imports.
  */
 
-import type { IPoolQuestion, ResponseQuality } from "./types";
+import type { IPoolQuestion } from "./types";
 
 // ---- Tag Normalization & Fuzzy Matching ----
 
@@ -67,21 +67,6 @@ export function tagsMatch(llmTag: string, poolTag: string): boolean {
     if (a.includes(b) || b.includes(a)) return true;
   }
   return false;
-}
-
-// ---- Difficulty Adjustment ----
-
-const DIFFICULTY_ADJUSTMENTS: Record<ResponseQuality, number> = {
-  excellent: +1,
-  good: +0.5,
-  partial: -0.5,
-  poor: -1,
-};
-
-/** Calculate target difficulty based on sampling plan + quality adjustment */
-export function getTargetDifficulty(planDifficulty: number, quality: ResponseQuality): number {
-  const adj = DIFFICULTY_ADJUSTMENTS[quality] ?? 0;
-  return Math.max(1, Math.min(5, planDifficulty + adj));
 }
 
 // ---- Question Scoring ----

@@ -64,6 +64,8 @@ function CreateInterviewForm() {
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [description, setDescription] = useState("");
+  const [numQuestions, setNumQuestions] = useState(5);
+  const [jobLevel, setJobLevel] = useState("mid");
   const [isMassInterview, setIsMassInterview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -90,7 +92,14 @@ function CreateInterviewForm() {
       const res = await fetch("/api/interviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, company, description, isMassInterview }),
+        body: JSON.stringify({
+          title,
+          company,
+          description,
+          numQuestions,
+          jobLevel,
+          isMassInterview,
+        }),
       });
 
       if (!res.ok) {
@@ -209,6 +218,56 @@ function CreateInterviewForm() {
               placeholder="Paste the job description here..."
               className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e] resize-none"
             />
+          </div>
+
+          <div>
+            <label htmlFor="jobLevel" className="block text-sm font-medium text-gray-300 mb-1">
+              Job Level
+            </label>
+            <select
+              id="jobLevel"
+              value={jobLevel}
+              onChange={(e) => setJobLevel(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+            >
+              <option value="associate" className="bg-gray-900">
+                Associate
+              </option>
+              <option value="junior" className="bg-gray-900">
+                Junior
+              </option>
+              <option value="mid" className="bg-gray-900">
+                Mid-Level
+              </option>
+              <option value="senior" className="bg-gray-900">
+                Senior
+              </option>
+              <option value="lead" className="bg-gray-900">
+                Lead
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="numQuestions" className="block text-sm font-medium text-gray-300 mb-1">
+              Number of Questions
+            </label>
+            <input
+              id="numQuestions"
+              type="number"
+              min={1}
+              max={20}
+              required
+              value={numQuestions}
+              onChange={(e) =>
+                setNumQuestions(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
+              }
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              We&apos;ll generate a larger pool ({numQuestions * 4} questions) and adaptively pick
+              the best {numQuestions} during the interview.
+            </p>
           </div>
 
           {/* Mass Interview Toggle */}

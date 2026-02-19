@@ -13,30 +13,46 @@ export interface IPoolQuestion {
   difficulty_score: number;
 }
 
-/** Quality assessment from the LLM */
-export type ResponseQuality = "excellent" | "good" | "partial" | "poor";
+export type JobLevel = "associate" | "junior" | "mid" | "senior" | "lead";
 
-/** LLM-determined action for next question selection */
-export type NextAction = "move_on" | "go_deeper";
+export type ScoreCategory = "very_low" | "borderline" | "acceptable" | "strong";
+
+export interface QuestionScore {
+  questionId: string;
+  questionText: string;
+  scores: { correctness: number; depth: number; communication: number };
+  overallScore: number;
+  category: ScoreCategory;
+  rationale: string;
+  userResponse: string;
+  expectedAnswer: string;
+}
 
 /** Parameters the LLM provides via function call */
 export interface LlmAnalysis {
-  response_quality: ResponseQuality;
-  next_action: NextAction;
+  scores: { correctness: number; depth: number; communication: number };
+  next_action: "move_on" | "go_deeper" | "clarify";
   suggested_topics: string[];
   user_response_summary: string;
+  rationale: string;
 }
 
 export interface AdaptiveState {
-  pool: IPoolQuestion[];
+  buckets: Record<number, IPoolQuestion[]>;
   samplingPlan: number[];
   currentPlanIndex: number;
   questionsAsked: number;
   totalQuestions: number;
   currentQuestionId: string | null;
+  currentQuestionText: string;
   currentExpectedAnswer: string;
   currentQuestionTags: string[];
   topicsAsked: string[];
+  followupUsedForCurrentQuestion: boolean;
+  questionScores: QuestionScore[];
 }
 
-export type AdaptiveResult = { action: "ask"; question: IPoolQuestion } | { action: "end" };
+export type AdaptiveResult =
+  | { action: "ask"; question: IPoolQuestion }
+  | { action: "followup"; clarificationPrompt: string }
+  | { action: "end" };

@@ -8,6 +8,7 @@ export interface ICandidateSession extends Document {
   candidateUserId: string;
   candidateName: string;
   candidateEmail: string;
+  jobLevel: string | null;
   status: "scheduled" | "in-progress" | "completed";
   // Adaptive state (copied from Interview template)
   questionPool: IPoolQuestion[];
@@ -35,6 +36,11 @@ const candidateSessionSchema = new Schema<ICandidateSession>(
     candidateUserId: { type: String, required: true },
     candidateName: { type: String, required: true },
     candidateEmail: { type: String, default: "" },
+    jobLevel: {
+      type: String,
+      enum: ["associate", "junior", "mid", "senior", "lead"],
+      default: null,
+    },
     status: {
       type: String,
       enum: ["scheduled", "in-progress", "completed"],

@@ -4,6 +4,7 @@ import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
 import InterviewSession from "./InterviewSession";
 import type { AdaptiveState, IPoolQuestion } from "app/lib/types";
+import { bucketByDifficulty } from "app/lib/sampling";
 
 export default async function InterviewSessionPage({
   params,
@@ -32,18 +33,22 @@ export default async function InterviewSessionPage({
 
   // Build adaptive state from stored interview data
   const pool = (interview.questionPool as IPoolQuestion[]) || [];
+  const buckets = bucketByDifficulty(pool);
   const currentQId = (interview.currentQuestionId as string) || null;
 
   const initialAdaptiveState: AdaptiveState = {
-    pool,
+    buckets,
     samplingPlan: (interview.samplingPlan as number[]) || [],
     currentPlanIndex: (interview.currentPlanIndex as number) || 0,
     questionsAsked: (interview.questionsAsked as number) || 0,
     totalQuestions: (interview.totalQuestions as number) || questions.length,
     currentQuestionId: currentQId,
+    currentQuestionText: (interview.currentQuestionText as string) || "",
     currentExpectedAnswer: (interview.currentExpectedAnswer as string) || "",
     currentQuestionTags: [],
     topicsAsked: [],
+    followupUsedForCurrentQuestion: false,
+    questionScores: [],
   };
 
   return (

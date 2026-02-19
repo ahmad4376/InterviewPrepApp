@@ -1,6 +1,6 @@
 /**
  * Seed script — imports question bank from combined_2.json into MongoDB.
- * Assigns difficulty_score heuristically based on tags.
+ * Uses a 5-component weighted scoring algorithm for difficulty assignment.
  *
  * Usage: npx tsx scripts/seed-questions.ts
  */
@@ -10,7 +10,6 @@ import { join } from "path";
 import mongoose from "mongoose";
 
 // Load .env.local manually since we're outside Next.js
-// Read and parse .env.local ourselves to avoid dotenv dependency
 function loadEnvFile(filePath: string) {
   try {
     const content = readFileSync(filePath, "utf-8");
@@ -21,7 +20,6 @@ function loadEnvFile(filePath: string) {
       if (eqIdx === -1) continue;
       const key = trimmed.slice(0, eqIdx).trim();
       let val = trimmed.slice(eqIdx + 1).trim();
-      // Remove surrounding quotes
       if (
         (val.startsWith('"') && val.endsWith('"')) ||
         (val.startsWith("'") && val.endsWith("'"))
@@ -43,97 +41,93 @@ if (!MONGO_URL) {
   process.exit(1);
 }
 
-// Difficulty heuristic based on tags
-const EASY_TAGS = new Set([
-  "basics",
-  "introduction",
-  "variables",
-  "data-types",
-  "strings",
-  "numbers",
-  "booleans",
-  "comments",
-  "syntax",
-]);
+// --- Difficulty scoring helpers (ported from newRepopulate.js) ---
 
-const MEDIUM_EASY_TAGS = new Set([
-  "functions",
-  "arrays",
-  "objects",
-  "loops",
-  "control-flow",
-  "operators",
-  "comparison",
-  "equality",
-  "properties",
-  "methods",
-  "conditionals",
-]);
+const safeStr = (v: unknown): string => (v === undefined || v === null ? "" : String(v));
 
-const MEDIUM_TAGS = new Set([
-  "scope",
-  "hoisting",
-  "this",
-  "closures",
-  "prototypes",
-  "dom",
-  "events",
-  "callbacks",
-  "error-handling",
-  "json",
-  "iife",
-  "es6",
-  "destructuring",
-  "spread",
-  "template-literals",
-]);
+function wordCount(text: string): number {
+  if (!text) return 0;
+  return (String(text).trim().match(/\S+/g) || []).length;
+}
 
-const HARD_TAGS = new Set([
-  "async",
-  "promises",
-  "generators",
-  "iterators",
-  "proxy",
-  "reflect",
-  "symbols",
-  "weakmap",
-  "weakset",
-  "modules",
-  "performance",
-  "memory",
-  "optimization",
-  "patterns",
-  "design-patterns",
-]);
+function extractAcronyms(text: string): string[] {
+  if (!text) return [];
+  const m = String(text).match(/\b[A-Z]{2,}\b/g);
+  return m ? Array.from(new Set(m)) : [];
+}
 
-const VERY_HARD_TAGS = new Set([
-  "engine",
-  "v8",
-  "event-loop",
-  "concurrency",
-  "worker",
-  "service-worker",
-  "webassembly",
-  "security",
-  "architecture",
-  "advanced",
-]);
+function safeLogNorm(value: number, cap: number): number {
+  const num = Math.log10(1 + Math.max(0, Number(value) || 0));
+  const den = Math.log10(1 + Math.max(1, cap));
+  return den === 0 ? 0 : Math.min(1, num / den);
+}
 
-function assignDifficulty(tags: string[]): number {
-  const lowerTags = tags.map((t) => t.toLowerCase());
+function automationScoreToDifficulty(score: number): number {
+  if (score <= 0.18) return 1;
+  if (score <= 0.36) return 2;
+  if (score <= 0.62) return 3;
+  if (score <= 0.82) return 4;
+  return 5;
+}
 
-  let score = 3; // default to medium
+function computeDifficultyScore(item: RawQuestion): number {
+  const questionText = safeStr(item.question_text || item.question_title || "");
+  const answerText = safeStr(item.answer_text || "");
+  const tags: string[] = Array.isArray(item.tags) ? item.tags : [];
 
-  for (const tag of lowerTags) {
-    if (EASY_TAGS.has(tag)) score = Math.min(score, 1);
-    else if (MEDIUM_EASY_TAGS.has(tag)) score = Math.min(score, 2);
-    else if (MEDIUM_TAGS.has(tag)) score = Math.max(score, 3);
-    else if (HARD_TAGS.has(tag)) score = Math.max(score, 4);
-    else if (VERY_HARD_TAGS.has(tag)) score = Math.max(score, 5);
-  }
+  const answerWordCount = wordCount(answerText);
 
-  // Use answer length as secondary signal
-  return score;
+  // 1) answer_length_norm (weight: 0.30)
+  let answer_length_norm = 0;
+  if (answerWordCount > 300) answer_length_norm = 1.0;
+  else if (answerWordCount >= 150) answer_length_norm = 0.5;
+
+  // 2) concept_count_norm (weight: 0.25)
+  const acronyms = extractAcronyms(questionText + " " + answerText);
+  const tagSet = new Set(tags.map((t) => String(t).toLowerCase().trim()).filter(Boolean));
+  const conceptCount = tagSet.size + acronyms.length;
+  let concept_count_norm = 0;
+  if (conceptCount <= 0) concept_count_norm = 0;
+  else if (conceptCount <= 2) concept_count_norm = 0.33;
+  else if (conceptCount <= 4) concept_count_norm = 0.66;
+  else concept_count_norm = 1.0;
+
+  // 3) abstraction_flag (weight: 0.20)
+  const abstractionKeywords = [
+    "design",
+    "architecture",
+    "architectural",
+    "scale",
+    "scalability",
+    "tradeoff",
+    "trade-off",
+    "tradeoffs",
+    "performance",
+    "patterns",
+    "best practice",
+    "best-practice",
+    "complexity",
+    "latency",
+    "throughput",
+  ];
+  const low = (questionText + " " + safeStr(item.question_title || "")).toLowerCase();
+  const abstraction_flag = abstractionKeywords.some((k) => low.includes(k)) ? 1.0 : 0.0;
+
+  // 4) community_norm (weight: 0.15) — no community data in combined_2.json
+  const community_norm =
+    0.4 * safeLogNorm(0, 500) + 0.4 * safeLogNorm(0, 500) + 0.2 * safeLogNorm(0, 1_000_000);
+
+  // 5) answer_variance_norm (weight: 0.10) — no variance data in combined_2.json
+  const answer_variance_norm = 0;
+
+  const automation_score =
+    0.3 * answer_length_norm +
+    0.25 * concept_count_norm +
+    0.2 * abstraction_flag +
+    0.15 * community_norm +
+    0.1 * answer_variance_norm;
+
+  return automationScoreToDifficulty(Math.max(0, Math.min(1, automation_score)));
 }
 
 interface RawQuestion {
@@ -143,7 +137,6 @@ interface RawQuestion {
   answer_text: string;
   tags: string[];
   rank_value?: number;
-  difficulty_score?: number;
 }
 
 async function seed() {
@@ -151,39 +144,53 @@ async function seed() {
   await mongoose.connect(MONGO_URL!);
   console.log("Connected.");
 
-  const dataPath = join(__dirname, "data", "combined_2.json");
-  const raw: RawQuestion[] = JSON.parse(readFileSync(dataPath, "utf-8"));
-  console.log(`Loaded ${raw.length} questions from combined_2.json`);
-
   const collection = mongoose.connection.collection("questions");
 
-  let upserted = 0;
-  let updated = 0;
+  // Clear collection for a clean repopulation
+  const del = await collection.deleteMany({});
+  console.log(`Deleted ${del.deletedCount} documents from Question collection.`);
 
-  for (const q of raw) {
-    const difficulty = q.difficulty_score ?? assignDifficulty(q.tags || []);
+  const dataPath = join(__dirname, "data", "combined_2.json");
+  const raw: RawQuestion[] = JSON.parse(readFileSync(dataPath, "utf-8"));
+  console.log(`Found ${raw.length} items to import.`);
 
-    const result = await collection.updateOne(
-      { question_id: q.question_id },
-      {
-        $set: {
-          question_id: q.question_id,
-          question_title: q.question_title || "",
-          question_text: q.question_text,
-          answer_text: q.answer_text,
-          tags: q.tags || [],
-          rank_value: q.rank_value ?? 0,
-          difficulty_score: difficulty,
+  const ops = raw.map((item) => {
+    const qid =
+      item.question_id !== undefined && item.question_id !== null ? String(item.question_id) : null;
+    const filter = qid ? { question_id: qid } : { question_text: String(item.question_text || "") };
+
+    const difficulty = computeDifficultyScore(item);
+
+    return {
+      updateOne: {
+        filter,
+        update: {
+          $set: {
+            question_id: qid,
+            question_title: item.question_title || "",
+            question_text: item.question_text || "",
+            answer_text: item.answer_text || "",
+            tags: Array.isArray(item.tags) ? item.tags : [],
+            rank_value: item.rank_value ?? 0,
+            difficulty_score: difficulty,
+          },
+          $setOnInsert: { createdAt: new Date() },
         },
+        upsert: true,
       },
-      { upsert: true },
-    );
+    };
+  });
 
-    if (result.upsertedCount) upserted++;
-    else if (result.modifiedCount) updated++;
+  if (ops.length === 0) {
+    console.log("No operations to run. Exiting.");
+    await mongoose.disconnect();
+    return;
   }
 
-  console.log(`Done. Upserted: ${upserted}, Updated: ${updated}`);
+  const res = await collection.bulkWrite(ops, { ordered: false });
+  console.log("BulkWrite result:", {
+    upserted: res.upsertedCount ?? 0,
+  });
 
   // Log difficulty distribution
   const pipeline = [
@@ -194,6 +201,7 @@ async function seed() {
   console.log("Difficulty distribution:", dist.map((d) => `${d._id}: ${d.count}`).join(", "));
 
   await mongoose.disconnect();
+  console.log("Disconnected.");
 }
 
 seed().catch((err) => {

@@ -14,7 +14,7 @@ import {
 } from "app/lib/constants";
 import InterviewTranscript from "app/components/InterviewTranscript";
 import { selectNextQuestion } from "app/lib/sampling";
-import type { AdaptiveState, LlmAnalysis, ResponseQuality, NextAction } from "app/lib/types";
+import type { AdaptiveState, LlmAnalysis } from "app/lib/types";
 import { toast } from "sonner";
 import { ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
@@ -123,7 +123,7 @@ export default function InterviewSession({
     [interviewId, hasStarted, apiBasePath],
   );
 
-  // Client-side function call handler — LLM provides analysis, we select from pool
+  // Client-side function call handler — LLM provides scores, we select from pool
   const handleFunctionCall = useCallback(
     async (funcName: string, args: Record<string, unknown>): Promise<Record<string, unknown>> => {
       if (funcName === "end_interview") {
@@ -141,28 +141,40 @@ export default function InterviewSession({
         return { error: "No adaptive state available" };
       }
 
-      // Parse LLM's structured analysis
+      // Parse LLM's analysis — new format with numeric scores
+      const rawScores = args.scores as
+        | { correctness?: unknown; depth?: unknown; communication?: unknown }
+        | undefined;
       const analysis: LlmAnalysis = {
-        response_quality: (args.response_quality as ResponseQuality) || "partial",
-        next_action: (args.next_action as NextAction) || "move_on",
+        scores: {
+          correctness: Number(rawScores?.correctness ?? 0),
+          depth: Number(rawScores?.depth ?? 0),
+          communication: Number(rawScores?.communication ?? 0),
+        },
+        next_action: (args.next_action as "move_on" | "go_deeper" | "clarify") || "move_on",
         suggested_topics: Array.isArray(args.suggested_topics)
           ? (args.suggested_topics as string[])
           : [],
         user_response_summary: (args.user_response_summary as string) || "",
+        rationale: (args.rationale as string) || "",
       };
 
       // Select next question using LLM's analysis (pure JS, no DB)
       const result = selectNextQuestion(state, analysis);
 
+      if (result.action === "followup") {
+        return {
+          action: "followup",
+          clarificationPrompt: result.clarificationPrompt,
+        };
+      }
+
       if (result.action === "ask") {
-        state.currentQuestionId = result.question.question_id;
-        state.currentExpectedAnswer = result.question.answer_text;
-        state.currentQuestionTags = result.question.tags;
-        state.questionsAsked++;
         setQuestionsAsked(state.questionsAsked);
         return {
           action: "ask",
           questionText: result.question.question_text,
+          expectedAnswer: result.question.answer_text,
         };
       }
 
@@ -176,12 +188,14 @@ export default function InterviewSession({
     setEnding(true);
     setShowEndConfirm(false);
     try {
+      const state = adaptiveStateRef.current;
       await fetch(`${apiBasePath}/${interviewId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "completed",
           transcript: transcriptRef.current,
+          questionScores: state?.questionScores ?? [],
         }),
       });
       toast.success("Interview completed \u2014 generating feedback...");

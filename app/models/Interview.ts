@@ -15,18 +15,34 @@ export interface TranscriptEntry {
 export interface InterviewFeedback {
   overallScore: number;
   summary: string;
-  categories: Array<{
+  aggregateScores: {
+    correctness: number;
+    depth: number;
+    communication: number;
+  };
+  questionScores: Array<{
+    questionId: string;
+    questionText: string;
+    scores: { correctness: number; depth: number; communication: number };
+    overallScore: number;
+    category: string;
+    rationale?: string;
+    userResponse?: string;
+    expectedAnswer?: string;
+  }>;
+  strengths: string[];
+  improvements: string[];
+  // Legacy fields for backwards compatibility with old interviews
+  categories?: Array<{
     name: string;
     score: number;
     feedback: string;
   }>;
-  questionFeedback: Array<{
+  questionFeedback?: Array<{
     question: string;
     score: number;
     assessment: string;
   }>;
-  strengths: string[];
-  improvements: string[];
 }
 
 export interface IInterview extends Document {
@@ -35,6 +51,7 @@ export interface IInterview extends Document {
   company: string;
   description: string;
   questions: IQuestion[];
+  jobLevel: string | null;
   status: "scheduled" | "in-progress" | "completed";
   // Adaptive interview state
   questionPool: IPoolQuestion[];
@@ -69,6 +86,11 @@ const interviewSchema = new Schema<IInterview>(
     title: { type: String, required: true },
     company: { type: String, required: true },
     description: { type: String, required: true },
+    jobLevel: {
+      type: String,
+      enum: ["associate", "junior", "mid", "senior", "lead"],
+      default: null,
+    },
     questions: { type: [questionSchema], default: [] },
     status: {
       type: String,
