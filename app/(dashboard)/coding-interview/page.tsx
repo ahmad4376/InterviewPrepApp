@@ -22,6 +22,16 @@ interface TestResult {
   time: string;
 }
 
+interface Problem {
+  id: string;
+  title: string;
+  tags: string[];
+  difficulty_bucket: string;
+  time_limit?: string | null;
+  memory_limit?: string | null;
+  stmt_body: string;
+}
+
 export default function CodingInterviewPage() {
   const [language, setLanguage] = useState<"python" | "cpp" | "javascript">("javascript");
   const [code, setCode] = useState(`function twoSum(nums, target) {
@@ -36,6 +46,10 @@ export default function CodingInterviewPage() {
   const [leftWidth, setLeftWidth] = useState(40); // percentage
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
+  const [problemsLoading, setProblemsLoading] = useState(true);
 
   // Update code template when language changes
   useEffect(() => {
@@ -67,43 +81,59 @@ public:
     }
   }, [language]);
 
-  // Mock problem data
-  const problem = {
-    id: 1,
-    title: "Two Sum",
-    difficulty: "Easy",
-    recommendedTime: "15 minutes",
-    timeComplexity: "O(n)",
-    spaceComplexity: "O(n)",
-    description: `Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers that add up to <code>target</code>.
+  useEffect(() => {
+    async function fetchProblems() {
+      try {
+        const [easyRes, mediumRes] = await Promise.all([
+          fetch("/api/leetcode?difficulty=easy"),
+          fetch("/api/leetcode?difficulty=medium"),
+        ]);
+        const easyData = await easyRes.json();
+        const mediumData = await mediumRes.json();
 
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
+        const easyPool: Problem[] = easyData.data ?? [];
+        const mediumPool: Problem[] = mediumData.data ?? [];
 
-You can return the answer in any order.`,
-    examples: [
-      {
-        input: "nums = [2,7,11,15], target = 9",
-        output: "[0,1]",
-        explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-      },
-      {
-        input: "nums = [3,2,4], target = 6",
-        output: "[1,2]",
-        explanation: "nums[1] + nums[2] == 6, we return [1, 2].",
-      },
-      {
-        input: "nums = [3,3], target = 6",
-        output: "[0,1]",
-        explanation: "nums[0] + nums[1] == 6, we return [0, 1].",
-      },
-    ],
-    constraints: [
-      "2 <= nums.length <= 10^4",
-      "-10^9 <= nums[i] <= 10^9",
-      "-10^9 <= target <= 10^9",
-      "Only one valid answer exists.",
-    ],
-  };
+        // Pick 2 random easy, 1 random medium
+        const shuffled = (arr: Problem[]) => arr.sort(() => Math.random() - 0.5);
+        const selected = [...shuffled(easyPool).slice(0, 2), ...shuffled(mediumPool).slice(0, 1)];
+
+        setProblems(selected);
+      } catch (e) {
+        console.error("Failed to fetch problems", e);
+      } finally {
+        setProblemsLoading(false);
+      }
+    }
+    fetchProblems();
+  }, []);
+
+  const currentProblem = problems[currentProblemIndex];
+
+  const problem = currentProblem
+    ? {
+        id: currentProblem.id,
+        title: currentProblem.title,
+        difficulty: currentProblem.difficulty_bucket,
+        recommendedTime: currentProblem.time_limit ?? "N/A",
+        timeComplexity: "N/A",
+        spaceComplexity: "N/A",
+        description: currentProblem.stmt_body,
+        examples: [
+          {
+            input: "nums = [2,7,11,15], target = 9",
+            output: "[0,1]",
+            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
+          },
+          {
+            input: "nums = [3,2,4], target = 6",
+            output: "[1,2]",
+            explanation: "nums[1] + nums[2] == 6, we return [1, 2].",
+          },
+        ],
+        constraints: currentProblem.tags.map((tag) => `Topic: ${tag}`),
+      }
+    : null;
 
   // Handle drag to resize
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -154,21 +184,21 @@ You can return the answer in any order.`,
       setTestResults([
         {
           passed: true,
-          input: problem.examples[0]!.input,
+          input: problem ? problem.examples[0]!.input : "",
           output: "[0,1]",
           expected: "[0,1]",
           time: "48ms",
         },
         {
           passed: true,
-          input: problem.examples[1]!.input,
+          input: problem ? problem.examples[1]!.input : "",
           output: "[1,2]",
           expected: "[1,2]",
           time: "52ms",
         },
         {
           passed: true,
-          input: problem.examples[2]!.input,
+          input: problem ? problem.examples[2]!.input : "",
           output: "[0,1]",
           expected: "[0,1]",
           time: "44ms",
@@ -198,6 +228,22 @@ You can return the answer in any order.`,
     }
   };
 
+  if (problemsLoading) {
+    return (
+      <div className="h-screen bg-[#0b0b0b] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3ecf8e]" />
+      </div>
+    );
+  }
+
+  if (!problem) {
+    return (
+      <div className="h-screen bg-[#0b0b0b] flex items-center justify-center text-gray-400">
+        No problems found. Please populate the database first.
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-[#0b0b0b] text-gray-200 flex flex-col">
       {/* Top Navigation Bar */}
@@ -209,6 +255,17 @@ You can return the answer in any order.`,
           </span>
         </div>
         <div className="flex items-center space-x-3">
+          <span className="text-xs text-gray-500">
+            {currentProblemIndex + 1} / {problems.length}
+          </span>
+          {currentProblemIndex < problems.length - 1 && (
+            <button
+              onClick={() => setCurrentProblemIndex((i) => i + 1)}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
+            >
+              Next Question →
+            </button>
+          )}
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value as "python" | "cpp" | "javascript")}
@@ -268,7 +325,7 @@ You can return the answer in any order.`,
                   <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                     <div className="flex items-center space-x-2 text-[#3ecf8e] mb-2">
                       <Timer className="w-4 h-4" />
-                      <span className="text-sm font-medium">Recommended Time</span>
+                      <span className="text-sm font-medium">Time Limit</span>
                     </div>
                     <div className="text-2xl font-bold text-white">{problem.recommendedTime}</div>
                   </div>
@@ -276,28 +333,32 @@ You can return the answer in any order.`,
                   <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                     <div className="flex items-center space-x-2 text-[#3ecf8e] mb-2">
                       <Cpu className="w-4 h-4" />
-                      <span className="text-sm font-medium">Complexity</span>
+                      <span className="text-sm font-medium">Memory Limit</span>
                     </div>
-                    <div className="flex items-baseline space-x-2">
-                      <span className="text-xl font-bold text-white">
-                        Time: {problem.timeComplexity}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline space-x-2 mt-1">
-                      <span className="text-sm text-gray-400">
-                        Space: {problem.spaceComplexity}
-                      </span>
+                    <div className="text-xl font-bold text-white">
+                      {currentProblem?.memory_limit ?? "N/A"}
                     </div>
                   </div>
                 </div>
 
-                {/* Description */}
-                <div
-                  className="prose prose-invert max-w-none text-gray-300"
-                  dangerouslySetInnerHTML={{ __html: problem.description }}
-                />
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2">
+                  {currentProblem?.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-gray-800 border border-gray-700 px-2.5 py-0.5 text-xs text-gray-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
 
-                {/* Examples */}
+                {/* Problem Statement */}
+                <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">
+                  {problem.description}
+                </div>
+
+                {/* Static Examples */}
                 <div className="space-y-4">
                   <h3 className="text-white font-medium">Examples:</h3>
                   {problem.examples.map((example, idx) => (
@@ -318,18 +379,6 @@ You can return the answer in any order.`,
                       )}
                     </div>
                   ))}
-                </div>
-
-                {/* Constraints */}
-                <div className="space-y-2">
-                  <h3 className="text-white font-medium">Constraints:</h3>
-                  <ul className="list-disc list-inside space-y-1">
-                    {problem.constraints.map((constraint, idx) => (
-                      <li key={idx} className="text-gray-400 text-sm">
-                        {constraint}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </div>
             )}
