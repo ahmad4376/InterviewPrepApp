@@ -41,3 +41,6 @@ next-env.d.ts
 .claude/
 claude.md
 deepgram_agent_docs.md
+
+# clerk configuration (can include secrets)
+/.clerk/

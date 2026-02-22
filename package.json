@@ -29,6 +29,7 @@
     "@clerk/nextjs": "^6.37.3",
     "@deepgram/sdk": "^4.7.0",
     "@lottiefiles/react-lottie-player": "^3.5.3",
+    "@monaco-editor/react": "^4.7.0",
     "@react-hook/resize-observer": "^2.0.2",
     "@types/pdfkit": "^0.17.4",
     "@uidotdev/usehooks": "^2.4.1",
