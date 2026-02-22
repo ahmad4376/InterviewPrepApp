@@ -1,0 +1,30 @@
+import mongoose, { Document, Schema, Model } from "mongoose";
+
+export interface IProblem extends Document {
+  id: string;
+  title: string;
+  tags: string[];
+  difficulty_bucket: string;
+  time_limit?: string | null;
+  memory_limit?: string | null;
+  stmt_body: string;
+}
+
+const ProblemSchema: Schema = new Schema(
+  {
+    id: { type: String, required: true, unique: true },
+    title: { type: String, required: true },
+    tags: { type: [String], default: [] },
+    difficulty_bucket: { type: String, required: true },
+    time_limit: { type: String, default: null },
+    memory_limit: { type: String, default: null },
+    stmt_body: { type: String, required: true },
+  },
+  {
+    collection: "problems",
+    timestamps: false, // no createdAt/updatedAt: you asked for minimal fields only
+  },
+);
+
+export const Problem: Model<IProblem> =
+  mongoose.models.Problem || mongoose.model<IProblem>("Problem", ProblemSchema);
