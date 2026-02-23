@@ -20,6 +20,12 @@ interface TestResult {
   output: string;
   expected: string;
   time: string;
+  error?: string | null;
+}
+
+interface Example {
+  input: string;
+  output: string;
 }
 
 interface Problem {
@@ -30,6 +36,17 @@ interface Problem {
   time_limit?: string | null;
   memory_limit?: string | null;
   stmt_body: string;
+  examples: Example[];
+}
+
+interface ExecuteResult {
+  passed: boolean;
+  input: string;
+  output: string;
+  expected: string;
+  time: string;
+  error: string | null;
+  hidden: boolean;
 }
 
 export default function CodingInterviewPage() {
@@ -99,6 +116,7 @@ public:
         const selected = [...shuffled(easyPool).slice(0, 2), ...shuffled(mediumPool).slice(0, 1)];
 
         setProblems(selected);
+        console.log("Sample problem from DB:", JSON.stringify(selected[0], null, 2));
       } catch (e) {
         console.error("Failed to fetch problems", e);
       } finally {
@@ -118,22 +136,100 @@ public:
         recommendedTime: currentProblem.time_limit ?? "N/A",
         timeComplexity: "N/A",
         spaceComplexity: "N/A",
-        description: currentProblem.stmt_body,
-        examples: [
-          {
-            input: "nums = [2,7,11,15], target = 9",
-            output: "[0,1]",
-            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-          },
-          {
-            input: "nums = [3,2,4], target = 6",
-            output: "[1,2]",
-            explanation: "nums[1] + nums[2] == 6, we return [1, 2].",
-          },
-        ],
+        description: cleanStatementBody(currentProblem.stmt_body),
+        examples: (() => {
+          const raw = currentProblem.examples ?? [];
+          if (raw.length === 0) return [];
+
+          if (raw.length === 1) {
+            const inputLines = raw[0]!.input.trim().split("\n");
+            const outputLines = raw[0]!.output.trim().split("\n");
+            console.log("Parsing examples, first line:", inputLines[0]);
+            console.log("Output examples, first line:", outputLines[0]);
+
+            const firstLine = inputLines[0]?.trim();
+            console.log("FIRST LINE: ", firstLine);
+            const t = parseInt(firstLine ?? "1");
+
+            if (!isNaN(t) && t > 1 && inputLines.length > 1) {
+              const bodyLines = inputLines.slice(1); // skip the t line
+              console.log("BodyLines: ", bodyLines);
+              const linesPerCase = Math.floor(bodyLines.length / t);
+              console.log(`Detected ${t} test cases with ~${linesPerCase} lines each`);
+              // console.log("Returned Input: ", bodyLines.slice(i * linesPerCase, (i + 1) * linesPerCase).join("\n"));
+
+              return Array.from({ length: Math.min(t, 2) }, (_, i) => ({
+                input: bodyLines.slice(i * linesPerCase, (i + 1) * linesPerCase).join("\n"),
+                output: outputLines[i] ?? "",
+                explanation: undefined,
+              }));
+            }
+          }
+
+          return raw.slice(0, 2).map((ex) => ({
+            input: ex.input,
+            output: ex.output,
+            explanation: undefined,
+          }));
+        })(),
         constraints: currentProblem.tags.map((tag) => `Topic: ${tag}`),
       }
     : null;
+
+  function cleanStatementBody(raw: string): string {
+    return (
+      raw
+        // remove leading title line like "A. Title"
+        .replace(/^[A-Z0-9]+\.\s+.+\n?/, "")
+        // remove time/memory limit lines
+        .replace(/time limit per test[\s\S]{0,80}?(second[s]?)/gi, "")
+        .replace(/memory limit per test[\s\S]{0,80}?(megabyte[s]?)/gi, "")
+        // remove input/output format lines
+        .replace(/^input\s*$/gim, "")
+        .replace(/^output\s*$/gim, "")
+        .replace(/^standard input\s*$/gim, "")
+        .replace(/^standard output\s*$/gim, "")
+        // cut off at Input/Output/Constraints/Note/Example section headings
+        .replace(
+          /\n?(The first line contains|The only line|Each line|Input Format|Output Format|Constraints|Additional constraint|Note\s*$|Example[s]?\s*$)[\s\S]*/im,
+          "",
+        )
+        // strip LaTeX math delimiters $$$...$$$ and $...$
+        .replace(/\${1,3}([^$]+)\${1,3}/g, "$1")
+        // strip \text{...} → just the inner text
+        .replace(/\\text\{([^}]*)\}/g, "$1")
+        .replace(/\\texttt\{([^}]*)\}/g, "$1")
+        .replace(/\\textbf\{([^}]*)\}/g, "$1")
+        // LaTeX symbols → unicode
+        .replace(/\\leq/g, "≤")
+        .replace(/\\geq/g, "≥")
+        .replace(/\\le\b/g, "≤")
+        .replace(/\\ge\b/g, "≥")
+        .replace(/\\neq/g, "≠")
+        .replace(/\\cdot/g, "·")
+        .replace(/\\ldots/g, "...")
+        .replace(/\\times/g, "×")
+        .replace(/\\infty/g, "∞")
+        // strip remaining backslash commands
+        .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, "$1")
+        .replace(/\\[a-zA-Z]+/g, "")
+        // collapse excessive blank lines
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
+    );
+  }
+
+  // function formatValue(val: string): string {
+  //   const trimmed = val.trim();
+  //   // if it's a single character (not a number), wrap in single quotes
+  //   if (trimmed.length === 1 && isNaN(Number(trimmed))) return `'${trimmed}'`;
+  //   // if it's a pure integer or float, display as-is
+  //   if (!isNaN(Number(trimmed)) && trimmed !== "") return trimmed;
+  //   // if it looks like a multi-line block (test input), display as-is
+  //   if (trimmed.includes("\n")) return trimmed;
+  //   // otherwise treat as string and wrap in quotes
+  //   return `"${trimmed}"`;
+  // }
 
   // Handle drag to resize
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -176,43 +272,47 @@ public:
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleRun = async () => {
+    if (!currentProblem) return;
     setIsRunning(true);
     setTestResults([]);
 
-    // Simulate test execution
-    setTimeout(() => {
-      setTestResults([
-        {
-          passed: true,
-          input: problem ? problem.examples[0]!.input : "",
-          output: "[0,1]",
-          expected: "[0,1]",
-          time: "48ms",
-        },
-        {
-          passed: true,
-          input: problem ? problem.examples[1]!.input : "",
-          output: "[1,2]",
-          expected: "[1,2]",
-          time: "52ms",
-        },
-        {
-          passed: true,
-          input: problem ? problem.examples[2]!.input : "",
-          output: "[0,1]",
-          expected: "[0,1]",
-          time: "44ms",
-        },
-        {
-          passed: false,
-          input: "nums = [1,2,3,4], target = 7",
-          output: "[2,3]",
-          expected: "[2,3]",
-          time: "51ms",
-        },
-      ]);
+    try {
+      const res = await fetch("/api/leetcode/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          language,
+          problemId: currentProblem.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error("Execution failed:", data.error);
+        setIsRunning(false);
+        return;
+      }
+
+      // Only surface visible test cases (first 2) to the user
+      const visibleResults = data.results
+        .filter((r: ExecuteResult) => !r.hidden)
+        .map((r: ExecuteResult) => ({
+          passed: r.passed,
+          input: r.input,
+          output: r.output,
+          expected: r.expected,
+          time: r.time,
+          error: r.error,
+        }));
+
+      setTestResults(visibleResults);
+    } catch (e) {
+      console.error("Failed to run code:", e);
+    } finally {
       setIsRunning(false);
-    }, 1500);
+    }
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -358,27 +458,36 @@ public:
                   {problem.description}
                 </div>
 
-                {/* Static Examples */}
-                <div className="space-y-4">
-                  <h3 className="text-white font-medium">Examples:</h3>
-                  {problem.examples.map((example, idx) => (
-                    <div key={idx} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                      <div className="mb-2">
-                        <span className="text-gray-400 text-sm">Input: </span>
-                        <code className="text-[#3ecf8e] text-sm">{example.input}</code>
-                      </div>
-                      <div className="mb-2">
-                        <span className="text-gray-400 text-sm">Output: </span>
-                        <code className="text-white text-sm">{example.output}</code>
-                      </div>
-                      {example.explanation && (
-                        <div>
-                          <span className="text-gray-400 text-sm">Explanation: </span>
-                          <span className="text-gray-300 text-sm">{example.explanation}</span>
+                {/* Examples - NeetCode style */}
+                <div className="space-y-6">
+                  {problem.examples.length === 0 ? (
+                    <p className="text-sm text-gray-500">No examples available.</p>
+                  ) : (
+                    problem.examples.slice(0, 2).map((example, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <h3 className="text-sm font-bold text-white">Example {idx + 1}:</h3>
+                        <div className="rounded-lg bg-gray-800/60 border border-gray-700 p-4 space-y-3">
+                          <div className="flex gap-3 items-start">
+                            <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
+                              Input:
+                            </span>
+                            <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
+                              {example.input}
+                            </pre>
+                          </div>
+                          <div className="border-t border-gray-700" />
+                          <div className="flex gap-3 items-start">
+                            <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
+                              Output:
+                            </span>
+                            <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
+                              {example.output}
+                            </pre>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -460,64 +569,99 @@ public:
           {/* Test Results Panel */}
           {(testResults.length > 0 || isRunning) && (
             <div className="h-64 border-t border-gray-800 bg-[#0f0f0f] overflow-y-auto">
-              <div className="px-4 py-2 border-b border-gray-800">
+              <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Test Results</h3>
+                {!isRunning && testResults.length > 0 && (
+                  <span
+                    className={`text-xs font-medium ${
+                      testResults.every((r) => r.passed) ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
+                    {testResults.filter((r) => r.passed).length}/{testResults.length} passed
+                  </span>
+                )}
               </div>
               <div className="p-4">
                 {isRunning ? (
-                  <div className="flex items-center justify-center h-32">
-                    <Loader2 className="w-6 h-6 animate-spin text-[#3ecf8e]" />
+                  <div className="flex items-center justify-center h-32 gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
+                    <span className="text-sm text-gray-400">Running test cases...</span>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <span className="text-sm text-gray-400">
-                        Passed: {testResults.filter((r) => r.passed).length}/{testResults.length}
-                      </span>
-                      <span className="text-sm text-gray-400">•</span>
-                      <span className="text-sm text-gray-400">
-                        Runtime: {testResults[0]?.time || "N/A"}
-                      </span>
-                    </div>
+                  <div className="space-y-3">
                     {testResults.map((result, idx) => (
                       <div
                         key={idx}
-                        className={`p-3 rounded-lg border ${
-                          result.passed
-                            ? "border-green-500/20 bg-green-500/5"
-                            : "border-red-500/20 bg-red-500/5"
+                        className={`rounded-lg border overflow-hidden ${
+                          result.passed ? "border-green-500/20" : "border-red-500/20"
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3">
+                        {/* Result Header */}
+                        <div
+                          className={`px-3 py-2 flex items-center justify-between ${
+                            result.passed ? "bg-green-500/10" : "bg-red-500/10"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
                             {result.passed ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
                             ) : (
-                              <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                              <XCircle className="w-4 h-4 text-red-400" />
                             )}
-                            <div>
-                              <div className="text-sm font-medium text-gray-300">
-                                Test Case {idx + 1}
-                              </div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                Input: {result.input}
-                              </div>
-                              <div className="text-xs mt-1">
-                                <span className="text-gray-400">Expected: </span>
-                                <span className="text-gray-300">{result.expected}</span>
-                              </div>
-                              <div className="text-xs">
-                                <span className="text-gray-400">Output: </span>
-                                <span className={result.passed ? "text-green-400" : "text-red-400"}>
-                                  {result.output}
-                                </span>
-                              </div>
-                            </div>
+                            <span
+                              className={`text-sm font-medium ${
+                                result.passed ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {result.passed ? "Accepted" : "Wrong Answer"} — Case {idx + 1}
+                            </span>
                           </div>
-                          <div className="flex items-center text-xs text-gray-400">
-                            <Clock className="w-3 h-3 mr-1" />
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock className="w-3 h-3" />
                             {result.time}
                           </div>
+                        </div>
+
+                        {/* Result Body */}
+                        <div className="bg-gray-900 p-3 space-y-2">
+                          <div className="flex gap-2 items-start">
+                            <span className="text-xs text-gray-500 w-20 shrink-0 pt-0.5">
+                              Input:
+                            </span>
+                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
+                              {result.input}
+                            </pre>
+                          </div>
+                          <div className="flex gap-2 items-start">
+                            <span className="text-xs text-gray-500 w-20 shrink-0 pt-0.5">
+                              Expected:
+                            </span>
+                            <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
+                              {result.expected}
+                            </pre>
+                          </div>
+                          <div className="flex gap-2 items-start">
+                            <span className="text-xs text-gray-500 w-20 shrink-0 pt-0.5">
+                              Your output:
+                            </span>
+                            <pre
+                              className={`text-xs font-mono whitespace-pre-wrap ${
+                                result.passed ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {result.output || "(no output)"}
+                            </pre>
+                          </div>
+                          {result.error && (
+                            <div className="flex gap-2 items-start">
+                              <span className="text-xs text-red-500 w-20 shrink-0 pt-0.5">
+                                Error:
+                              </span>
+                              <pre className="text-xs text-red-300 font-mono whitespace-pre-wrap">
+                                {result.error}
+                              </pre>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

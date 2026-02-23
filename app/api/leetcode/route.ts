@@ -14,10 +14,7 @@ export async function GET(request: NextRequest) {
     if (difficulty) filter.difficulty_bucket = difficulty;
     if (tag) filter.tags = { $in: [tag] };
 
-    const problems = await Problem.find(filter).select(
-      "id title tags difficulty_bucket time_limit memory_limit",
-      // excludes stmt_body for performance on list views
-    );
+    const problems = await Problem.find(filter);
 
     return NextResponse.json({ success: true, data: problems }, { status: 200 });
   } catch (error) {

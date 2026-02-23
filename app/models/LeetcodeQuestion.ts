@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema, Model } from "mongoose";
 
+export interface IExample {
+  input: string;
+  output: string;
+}
+
 export interface IProblem extends Document {
   id: string;
   title: string;
@@ -8,7 +13,16 @@ export interface IProblem extends Document {
   time_limit?: string | null;
   memory_limit?: string | null;
   stmt_body: string;
+  examples: IExample[];
 }
+
+const ExampleSchema: Schema = new Schema(
+  {
+    input: { type: String, default: "" },
+    output: { type: String, default: "" },
+  },
+  { _id: false },
+);
 
 const ProblemSchema: Schema = new Schema(
   {
@@ -19,10 +33,11 @@ const ProblemSchema: Schema = new Schema(
     time_limit: { type: String, default: null },
     memory_limit: { type: String, default: null },
     stmt_body: { type: String, required: true },
+    examples: { type: [ExampleSchema], default: [] },
   },
   {
     collection: "problems",
-    timestamps: false, // no createdAt/updatedAt: you asked for minimal fields only
+    timestamps: false,
   },
 );
 
