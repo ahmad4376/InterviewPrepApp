@@ -13,7 +13,7 @@ export interface ICodeTemplates {
 
 export interface IIOSchema {
   input_type?: string;
-  output_type?: string;
+  output_type?: string; // "string" | "float" | "yes_no"
   input_format?: string;
   output_format?: string;
 }
@@ -29,6 +29,9 @@ export interface IProblem extends Document {
   examples: IExample[];
   code_templates?: ICodeTemplates;
   io_schema?: IIOSchema;
+  has_t: boolean; // false if input has no leading t (test case count)
+  is_interactive: boolean; // true if problem uses ?/! query-response format
+  example_type: "batch" | "individual"; // batch = one object with all cases, individual = one object per case
 }
 
 const ExampleSchema: Schema = new Schema(
@@ -51,7 +54,7 @@ const CodeTemplatesSchema: Schema = new Schema(
 const IOSchemaSchema: Schema = new Schema(
   {
     input_type: { type: String, default: null },
-    output_type: { type: String, default: null },
+    output_type: { type: String, default: "string" },
     input_format: { type: String, default: null },
     output_format: { type: String, default: null },
   },
@@ -70,6 +73,9 @@ const ProblemSchema: Schema = new Schema(
     examples: { type: [ExampleSchema], default: [] },
     code_templates: { type: CodeTemplatesSchema, default: () => ({}) },
     io_schema: { type: IOSchemaSchema, default: () => ({}) },
+    has_t: { type: Boolean, default: true },
+    is_interactive: { type: Boolean, default: false },
+    example_type: { type: String, enum: ["batch", "individual"], default: "batch" },
   },
   {
     collection: "problems",
@@ -77,5 +83,6 @@ const ProblemSchema: Schema = new Schema(
   },
 );
 
-export const Problem: Model<IProblem> =
-  mongoose.models.Problem || mongoose.model<IProblem>("Problem", ProblemSchema);
+export const Problem: Model<IProblem> = mongoose.models.Problem
+  ? (mongoose.models.Problem as Model<IProblem>)
+  : mongoose.model<IProblem>("Problem", ProblemSchema);

@@ -38,18 +38,19 @@ interface Problem {
   stmt_body: string;
   examples: Example[];
   code_templates?: {
-    // ← add this
     javascript?: string;
     python?: string;
     cpp?: string;
   };
   io_schema?: {
-    // ← add this
     input_type?: string;
     output_type?: string;
     input_format?: string;
     output_format?: string;
   };
+  has_t: boolean;
+  is_interactive: boolean;
+  example_type: "batch" | "individual";
 }
 
 interface ExecuteResult {
@@ -106,35 +107,6 @@ function cleanStatementBody(raw: string): string {
     .trim();
 }
 
-function extractDisplayExamples(
-  rawInput: string,
-  rawOutput: string,
-): { input: string; output: string }[] {
-  const inputLines = rawInput.trim().split("\n").filter(Boolean);
-  const outputLines = rawOutput.trim().split("\n").filter(Boolean);
-
-  if (inputLines.length === 0) return [];
-
-  const t = parseInt(inputLines[0] ?? "1");
-  if (isNaN(t) || t <= 0) return [{ input: rawInput.trim(), output: rawOutput.trim() }];
-
-  const body = inputLines.slice(1);
-  if (body.length === 0) return [];
-
-  const inferredLines = Math.max(1, Math.floor(body.length / t));
-  const results: { input: string; output: string }[] = [];
-
-  for (let i = 0; i < Math.min(t, 2); i++) {
-    const inputSlice = body.slice(i * inferredLines, (i + 1) * inferredLines).join("\n");
-    const output = outputLines[i] ?? "";
-    if (inputSlice.trim() || output.trim()) {
-      results.push({ input: inputSlice, output });
-    }
-  }
-
-  return results;
-}
-
 export default function CodingInterviewPage() {
   const [language, setLanguage] = useState<"python" | "cpp" | "javascript">("javascript");
   const [code, setCode] = useState(`function twoSum(nums, target) {
@@ -153,6 +125,8 @@ export default function CodingInterviewPage() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [problemsLoading, setProblemsLoading] = useState(true);
+
+  const [testPanel, setTestPanel] = useState(false);
 
   useEffect(() => {
     async function fetchProblems() {
@@ -218,21 +192,7 @@ export default function CodingInterviewPage() {
         description: cleanStatementBody(currentProblem.stmt_body),
         examples: (() => {
           const raw = currentProblem.examples ?? [];
-          if (raw.length === 0) return [];
-
-          const valid = raw.filter((ex) => ex.input.trim() !== "" || ex.output.trim() !== "");
-
-          if (valid.length > 0) {
-            const first = valid[0]!;
-            return extractDisplayExamples(first.input, first.output); // no third arg
-          }
-
-          const first = raw[0]!;
-          const outputLines = first.output.trim().split("\n").filter(Boolean);
-          return outputLines.slice(0, 2).map((out, i) => ({
-            input: `Test case ${i + 1}`,
-            output: out,
-          }));
+          return raw.filter((ex) => ex.input.trim() !== "" || ex.output.trim() !== "").slice(0, 2);
         })(),
         constraints: currentProblem.tags.map((tag) => `Topic: ${tag}`),
       }
@@ -280,6 +240,7 @@ export default function CodingInterviewPage() {
 
   const handleRun = async () => {
     if (!currentProblem) return;
+    if (currentProblem.is_interactive) return;
 
     setIsRunning(true);
     setTestResults([]);
@@ -292,6 +253,7 @@ export default function CodingInterviewPage() {
           code,
           language,
           problemId: currentProblem.id,
+          example_type: currentProblem.example_type,
         }),
       });
 
@@ -311,11 +273,9 @@ export default function CodingInterviewPage() {
           error: r.error,
         }));
 
-      console.log("[7] visibleResults length:", visibleResults.length);
-
-      // Set both together so React batches them in one render
       setTestResults(visibleResults);
       setIsRunning(false);
+      setTestPanel(true);
     } catch (e) {
       console.error("[ERROR]", e);
       setIsRunning(false);
@@ -479,6 +439,14 @@ export default function CodingInterviewPage() {
                   {problem.description}
                 </div>
 
+                {/* Interactive Problem Warning */}
+                {currentProblem?.is_interactive && (
+                  <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 text-sm text-yellow-400">
+                    ⚠ This is an interactive problem. Code execution is not supported — you can
+                    read and understand the problem, but test cases cannot be evaluated
+                    automatically.
+                  </div>
+                )}
                 {/* Examples - NeetCode style */}
                 <div className="space-y-6">
                   {problem.examples.length === 0 ? (
@@ -553,7 +521,7 @@ export default function CodingInterviewPage() {
             </div>
             <button
               onClick={handleRun}
-              disabled={isRunning}
+              disabled={isRunning || currentProblem?.is_interactive === true}
               className="bg-[#3ecf8e] hover:bg-[#36be81] text-black px-4 py-1.5 rounded-md text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isRunning ? (
@@ -609,12 +577,13 @@ export default function CodingInterviewPage() {
               </div>
 
               <div className="p-4">
-                {isRunning ? (
+                {isRunning && (
                   <div className="flex items-center justify-center h-32 gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
                     <span className="text-sm text-gray-400">Running test cases...</span>
                   </div>
-                ) : (
+                )}
+                {testPanel && (
                   <div className="space-y-3">
                     {testResults.map((result, idx) => (
                       <div

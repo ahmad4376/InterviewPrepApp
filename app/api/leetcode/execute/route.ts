@@ -143,12 +143,12 @@ export async function POST(request: NextRequest) {
     console.log("[EXECUTE] DB connected");
 
     const body = await request.json();
-    const { code, language, problemId } = body;
+    const { code, language, problemId, example_type } = body;
     console.log(
-      `[EXECUTE] Request: problemId=${problemId}, language=${language}, code length=${code?.length}`,
+      `[EXECUTE] Request: problemId=${problemId}, language=${language}, code length=${code?.length}, example_type=${example_type}`,
     );
 
-    if (!code || !language || !problemId) {
+    if (!code || !language || !problemId || !example_type) {
       console.log("[EXECUTE] Missing fields");
       return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
     }
@@ -174,7 +174,9 @@ export async function POST(request: NextRequest) {
       const expected = (ex?.output ?? "").trim(); // <-- Then expected
 
       // Now use rawInput to create the wrapped input
-      const input = rawInput ? `1\n${rawInput}` : "1\n";
+      const firstLine = rawInput.split("\n")[0]?.trim() ?? "";
+      const looksLikeBatchHeader = /^\d+$/.test(firstLine) && rawInput.split("\n").length > 1;
+      const input = looksLikeBatchHeader ? rawInput : `1\n${rawInput}`;
       console.log(`[TEST CASE ${i + 1}] input length=${input.length}, expected="${expected}"`);
 
       let output = "",
