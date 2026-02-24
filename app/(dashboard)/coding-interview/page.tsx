@@ -154,8 +154,6 @@ export default function CodingInterviewPage() {
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [problemsLoading, setProblemsLoading] = useState(true);
 
-  const [runError, setRunError] = useState<string | null>(null);
-
   useEffect(() => {
     async function fetchProblems() {
       try {
@@ -281,12 +279,10 @@ export default function CodingInterviewPage() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleRun = async () => {
-    console.log("Handling Run");
     if (!currentProblem) return;
-    console.log("Running code for problem:", currentProblem.id, "language:", language);
+
     setIsRunning(true);
     setTestResults([]);
-    setRunError(null);
 
     try {
       const res = await fetch("/api/leetcode/execute", {
@@ -299,22 +295,10 @@ export default function CodingInterviewPage() {
         }),
       });
 
-      console.log("Response status:", res.status);
-
-      if (!res.ok) {
-        setRunError(`Server error: ${res.status} ${res.statusText}`);
-        return;
-      }
-
       const data = await res.json();
-      console.log("Execute response:", JSON.stringify(data, null, 2));
+      console.log("[5] Response JSON:", JSON.stringify(data, null, 2));
 
-      if (!data.success) {
-        setRunError(data.error ?? "Execution failed");
-        return;
-      }
-
-      console.log("All results:", data.results);
+      if (!data.success) return;
 
       const visibleResults = data.results
         .filter((r: ExecuteResult) => !r.hidden)
@@ -327,19 +311,13 @@ export default function CodingInterviewPage() {
           error: r.error,
         }));
 
-      console.log("Visible results:", visibleResults);
+      console.log("[7] visibleResults length:", visibleResults.length);
 
-      const hiddenResults = data.results.filter((r: ExecuteResult) => r.hidden);
-      if (hiddenResults.length > 0) {
-        const hiddenPassed = hiddenResults.filter((r: ExecuteResult) => r.passed).length;
-        console.log(`Hidden: ${hiddenPassed}/${hiddenResults.length} passed`);
-      }
-
+      // Set both together so React batches them in one render
       setTestResults(visibleResults);
+      setIsRunning(false);
     } catch (e) {
-      setRunError(`Network error: ${e instanceof Error ? e.message : "Unknown error"}`);
-      console.error("Failed to run code:", e);
-    } finally {
+      console.error("[ERROR]", e);
       setIsRunning(false);
     }
   };
@@ -386,7 +364,10 @@ export default function CodingInterviewPage() {
         <div className="flex items-center space-x-3">
           {currentProblemIndex > 0 && (
             <button
-              onClick={() => setCurrentProblemIndex((i) => i - 1)}
+              onClick={() => {
+                setCurrentProblemIndex((i) => i - 1);
+                setTestResults([]);
+              }}
               className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
             >
               ← Prev
@@ -397,7 +378,10 @@ export default function CodingInterviewPage() {
           </span>
           {currentProblemIndex < problems.length - 1 && (
             <button
-              onClick={() => setCurrentProblemIndex((i) => i + 1)}
+              onClick={() => {
+                setCurrentProblemIndex((i) => i + 1);
+                setTestResults([]);
+              }}
               className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
             >
               Next →
@@ -609,7 +593,7 @@ export default function CodingInterviewPage() {
           </div>
 
           {/* Test Results Panel */}
-          {(testResults.length > 0 || isRunning || runError) && (
+          {(testResults.length > 0 || isRunning) && (
             <div className="h-64 border-t border-gray-800 bg-[#0f0f0f] overflow-y-auto">
               <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Test Results</h3>
@@ -630,10 +614,6 @@ export default function CodingInterviewPage() {
                     <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
                     <span className="text-sm text-gray-400">Running test cases...</span>
                   </div>
-                ) : runError ? (
-                  <pre className="text-xs text-red-300 font-mono whitespace-pre-wrap">
-                    {runError}
-                  </pre>
                 ) : (
                   <div className="space-y-3">
                     {testResults.map((result, idx) => (
@@ -643,7 +623,6 @@ export default function CodingInterviewPage() {
                           result.passed ? "border-green-500/20" : "border-red-500/20"
                         }`}
                       >
-                        {/* Result Header */}
                         <div
                           className={`px-3 py-2 flex items-center justify-between ${
                             result.passed ? "bg-green-500/10" : "bg-red-500/10"
@@ -669,7 +648,6 @@ export default function CodingInterviewPage() {
                           </div>
                         </div>
 
-                        {/* Result Body */}
                         <div className="bg-gray-900 p-3 space-y-2">
                           <div className="flex gap-2 items-start">
                             <span className="text-xs text-gray-500 w-20 shrink-0 pt-0.5">
