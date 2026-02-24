@@ -46,39 +46,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No test cases found" }, { status: 400 });
     }
 
-    const results = await Promise.all(
-      problem.examples.map(async (tc, idx) => {
-        try {
-          const result = await runOnPiston(code, language, tc.input);
-          const actualOutput = (result.run?.stdout ?? "").trim();
-          const expectedOutput = tc.output.trim();
-          const error = result.run?.stderr?.trim() || null;
-          const passed = !error && actualOutput === expectedOutput;
+    // With this:
+    const fullInput = problem.examples[0]?.input ?? "";
+    const fullExpected = (problem.examples[0]?.output ?? "").trim();
 
-          return {
-            testCase: idx + 1,
-            passed,
-            input: tc.input,
-            expected: expectedOutput,
-            output: actualOutput,
-            time: "N/A", // Piston doesn't return runtime
-            error,
-            hidden: idx >= 2,
-          };
-        } catch {
-          return {
-            testCase: idx + 1,
-            passed: false,
-            input: tc.input,
-            expected: tc.output.trim(),
-            output: "",
-            time: "N/A",
-            error: "Execution failed",
-            hidden: idx >= 2,
-          };
-        }
-      }),
-    );
+    if (!fullInput) {
+      return NextResponse.json({ success: false, error: "No test cases found" }, { status: 400 });
+    }
+
+    const result = await runOnPiston(code, language, fullInput);
+    const actualOutput = (result.run?.stdout ?? "").trim();
+    const error = result.run?.stderr?.trim() || null;
+
+    // Compare line by line so we can show per-case results
+    const expectedLines = fullExpected
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter(Boolean);
+    const actualLines = actualOutput
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter(Boolean);
+
+    const inputLines = fullInput.trim().split("\n");
+    const firstLine = inputLines[0]?.trim() ?? "";
+    const t = parseInt(firstLine);
+
+    // Replace the results mapping:
+    const results = expectedLines.map((expected, idx) => ({
+      testCase: idx + 1,
+      passed: actualLines[idx] === expected,
+      input: `Test case ${idx + 1} of ${isNaN(t) ? "?" : t}`,
+      expected,
+      output: actualLines[idx] ?? "(no output)",
+      time: "N/A",
+      error: idx === 0 ? error : null,
+      hidden: idx >= 2,
+    }));
 
     const allPassed = results.every((r) => r.passed);
 

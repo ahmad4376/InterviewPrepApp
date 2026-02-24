@@ -37,6 +37,19 @@ interface Problem {
   memory_limit?: string | null;
   stmt_body: string;
   examples: Example[];
+  code_templates?: {
+    // ← add this
+    javascript?: string;
+    python?: string;
+    cpp?: string;
+  };
+  io_schema?: {
+    // ← add this
+    input_type?: string;
+    output_type?: string;
+    input_format?: string;
+    output_format?: string;
+  };
 }
 
 interface ExecuteResult {
@@ -47,6 +60,79 @@ interface ExecuteResult {
   time: string;
   error: string | null;
   hidden: boolean;
+}
+
+function getDefaultTemplate(language: string): string {
+  switch (language) {
+    case "python":
+      return `import sys\ninput = sys.stdin.readline\n\ndef solve():\n    # Write your solution here\n    pass\n\nt = int(input())\nfor _ in range(t):\n    solve()`;
+    case "cpp":
+      return `#include <bits/stdc++.h>\nusing namespace std;\n\nvoid solve() {\n    // Write your solution here\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    int t;\n    cin >> t;\n    while (t--) solve();\n    return 0;\n}`;
+    case "javascript":
+    default:
+      return `const lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nlet idx = 0;\nconst t = parseInt(lines[idx++]);\n\nfor (let i = 0; i < t; i++) {\n    // Read input using lines[idx++]\n    // Write your solution here\n}`;
+  }
+}
+
+function cleanStatementBody(raw: string): string {
+  return raw
+    .replace(/^[A-Z0-9]+\.\s+.+\n?/, "")
+    .replace(/time limit per test[\s\S]{0,80}?(second[s]?)/gi, "")
+    .replace(/memory limit per test[\s\S]{0,80}?(megabyte[s]?)/gi, "")
+    .replace(/^input\s*$/gim, "")
+    .replace(/^output\s*$/gim, "")
+    .replace(/^standard input\s*$/gim, "")
+    .replace(/^standard output\s*$/gim, "")
+    .replace(
+      /\n?(The first line contains|The only line|Each line|Input Format|Output Format|Constraints|Additional constraint|Note\s*$|Example[s]?\s*$)[\s\S]*/im,
+      "",
+    )
+    .replace(/\${1,3}([^$]+)\${1,3}/g, "$1")
+    .replace(/\\text\{([^}]*)\}/g, "$1")
+    .replace(/\\texttt\{([^}]*)\}/g, "$1")
+    .replace(/\\textbf\{([^}]*)\}/g, "$1")
+    .replace(/\\leq/g, "≤")
+    .replace(/\\geq/g, "≥")
+    .replace(/\\le\b/g, "≤")
+    .replace(/\\ge\b/g, "≥")
+    .replace(/\\neq/g, "≠")
+    .replace(/\\cdot/g, "·")
+    .replace(/\\ldots/g, "...")
+    .replace(/\\times/g, "×")
+    .replace(/\\infty/g, "∞")
+    .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, "$1")
+    .replace(/\\[a-zA-Z]+/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractDisplayExamples(
+  rawInput: string,
+  rawOutput: string,
+): { input: string; output: string }[] {
+  const inputLines = rawInput.trim().split("\n").filter(Boolean);
+  const outputLines = rawOutput.trim().split("\n").filter(Boolean);
+
+  if (inputLines.length === 0) return [];
+
+  const t = parseInt(inputLines[0] ?? "1");
+  if (isNaN(t) || t <= 0) return [{ input: rawInput.trim(), output: rawOutput.trim() }];
+
+  const body = inputLines.slice(1);
+  if (body.length === 0) return [];
+
+  const inferredLines = Math.max(1, Math.floor(body.length / t));
+  const results: { input: string; output: string }[] = [];
+
+  for (let i = 0; i < Math.min(t, 2); i++) {
+    const inputSlice = body.slice(i * inferredLines, (i + 1) * inferredLines).join("\n");
+    const output = outputLines[i] ?? "";
+    if (inputSlice.trim() || output.trim()) {
+      results.push({ input: inputSlice, output });
+    }
+  }
+
+  return results;
 }
 
 export default function CodingInterviewPage() {
@@ -68,35 +154,7 @@ export default function CodingInterviewPage() {
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [problemsLoading, setProblemsLoading] = useState(true);
 
-  // Update code template when language changes
-  useEffect(() => {
-    switch (language) {
-      case "python":
-        setCode(`def twoSum(nums, target):
-    # Write your solution here
-    pass`);
-        break;
-      case "cpp":
-        setCode(`#include <vector>
-using namespace std;
-
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        // Write your solution here
-        
-    }
-};`);
-        break;
-      case "javascript":
-      default:
-        setCode(`function twoSum(nums, target) {
-    // Write your solution here
-    
-}`);
-        break;
-    }
-  }, [language]);
+  const [runError, setRunError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProblems() {
@@ -128,6 +186,29 @@ public:
 
   const currentProblem = problems[currentProblemIndex];
 
+  // async function fetchFunctionSignature(
+  //   problemTitle: string,
+  //   stmtBody: string,
+  //   language: string
+  // ): Promise<string> {
+  //   try {
+  //     const res = await fetch("/api/leetcode/signature", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ problemTitle, stmtBody, language }),
+  //     });
+  //     const data = await res.json();
+  //     return data.signature ?? getDefaultTemplate(language);
+  //   } catch {
+  //     return getDefaultTemplate(language);
+  //   }
+  // }
+
+  useEffect(() => {
+    if (!currentProblem) return;
+    setCode(getDefaultTemplate(language));
+  }, [language, currentProblem]); // getDefaultTemplate is now stable (outside component)
+
   const problem = currentProblem
     ? {
         id: currentProblem.id,
@@ -141,95 +222,23 @@ public:
           const raw = currentProblem.examples ?? [];
           if (raw.length === 0) return [];
 
-          if (raw.length === 1) {
-            const inputLines = raw[0]!.input.trim().split("\n");
-            const outputLines = raw[0]!.output.trim().split("\n");
-            console.log("Parsing examples, first line:", inputLines[0]);
-            console.log("Output examples, first line:", outputLines[0]);
+          const valid = raw.filter((ex) => ex.input.trim() !== "" || ex.output.trim() !== "");
 
-            const firstLine = inputLines[0]?.trim();
-            console.log("FIRST LINE: ", firstLine);
-            const t = parseInt(firstLine ?? "1");
-
-            if (!isNaN(t) && t > 1 && inputLines.length > 1) {
-              const bodyLines = inputLines.slice(1); // skip the t line
-              console.log("BodyLines: ", bodyLines);
-              const linesPerCase = Math.floor(bodyLines.length / t);
-              console.log(`Detected ${t} test cases with ~${linesPerCase} lines each`);
-              // console.log("Returned Input: ", bodyLines.slice(i * linesPerCase, (i + 1) * linesPerCase).join("\n"));
-
-              return Array.from({ length: Math.min(t, 2) }, (_, i) => ({
-                input: bodyLines.slice(i * linesPerCase, (i + 1) * linesPerCase).join("\n"),
-                output: outputLines[i] ?? "",
-                explanation: undefined,
-              }));
-            }
+          if (valid.length > 0) {
+            const first = valid[0]!;
+            return extractDisplayExamples(first.input, first.output); // no third arg
           }
 
-          return raw.slice(0, 2).map((ex) => ({
-            input: ex.input,
-            output: ex.output,
-            explanation: undefined,
+          const first = raw[0]!;
+          const outputLines = first.output.trim().split("\n").filter(Boolean);
+          return outputLines.slice(0, 2).map((out, i) => ({
+            input: `Test case ${i + 1}`,
+            output: out,
           }));
         })(),
         constraints: currentProblem.tags.map((tag) => `Topic: ${tag}`),
       }
     : null;
-
-  function cleanStatementBody(raw: string): string {
-    return (
-      raw
-        // remove leading title line like "A. Title"
-        .replace(/^[A-Z0-9]+\.\s+.+\n?/, "")
-        // remove time/memory limit lines
-        .replace(/time limit per test[\s\S]{0,80}?(second[s]?)/gi, "")
-        .replace(/memory limit per test[\s\S]{0,80}?(megabyte[s]?)/gi, "")
-        // remove input/output format lines
-        .replace(/^input\s*$/gim, "")
-        .replace(/^output\s*$/gim, "")
-        .replace(/^standard input\s*$/gim, "")
-        .replace(/^standard output\s*$/gim, "")
-        // cut off at Input/Output/Constraints/Note/Example section headings
-        .replace(
-          /\n?(The first line contains|The only line|Each line|Input Format|Output Format|Constraints|Additional constraint|Note\s*$|Example[s]?\s*$)[\s\S]*/im,
-          "",
-        )
-        // strip LaTeX math delimiters $$$...$$$ and $...$
-        .replace(/\${1,3}([^$]+)\${1,3}/g, "$1")
-        // strip \text{...} → just the inner text
-        .replace(/\\text\{([^}]*)\}/g, "$1")
-        .replace(/\\texttt\{([^}]*)\}/g, "$1")
-        .replace(/\\textbf\{([^}]*)\}/g, "$1")
-        // LaTeX symbols → unicode
-        .replace(/\\leq/g, "≤")
-        .replace(/\\geq/g, "≥")
-        .replace(/\\le\b/g, "≤")
-        .replace(/\\ge\b/g, "≥")
-        .replace(/\\neq/g, "≠")
-        .replace(/\\cdot/g, "·")
-        .replace(/\\ldots/g, "...")
-        .replace(/\\times/g, "×")
-        .replace(/\\infty/g, "∞")
-        // strip remaining backslash commands
-        .replace(/\\[a-zA-Z]+\{([^}]*)\}/g, "$1")
-        .replace(/\\[a-zA-Z]+/g, "")
-        // collapse excessive blank lines
-        .replace(/\n{3,}/g, "\n\n")
-        .trim()
-    );
-  }
-
-  // function formatValue(val: string): string {
-  //   const trimmed = val.trim();
-  //   // if it's a single character (not a number), wrap in single quotes
-  //   if (trimmed.length === 1 && isNaN(Number(trimmed))) return `'${trimmed}'`;
-  //   // if it's a pure integer or float, display as-is
-  //   if (!isNaN(Number(trimmed)) && trimmed !== "") return trimmed;
-  //   // if it looks like a multi-line block (test input), display as-is
-  //   if (trimmed.includes("\n")) return trimmed;
-  //   // otherwise treat as string and wrap in quotes
-  //   return `"${trimmed}"`;
-  // }
 
   // Handle drag to resize
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -272,9 +281,12 @@ public:
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleRun = async () => {
+    console.log("Handling Run");
     if (!currentProblem) return;
+    console.log("Running code for problem:", currentProblem.id, "language:", language);
     setIsRunning(true);
     setTestResults([]);
+    setRunError(null);
 
     try {
       const res = await fetch("/api/leetcode/execute", {
@@ -287,15 +299,23 @@ public:
         }),
       });
 
-      const data = await res.json();
+      console.log("Response status:", res.status);
 
-      if (!data.success) {
-        console.error("Execution failed:", data.error);
-        setIsRunning(false);
+      if (!res.ok) {
+        setRunError(`Server error: ${res.status} ${res.statusText}`);
         return;
       }
 
-      // Only surface visible test cases (first 2) to the user
+      const data = await res.json();
+      console.log("Execute response:", JSON.stringify(data, null, 2));
+
+      if (!data.success) {
+        setRunError(data.error ?? "Execution failed");
+        return;
+      }
+
+      console.log("All results:", data.results);
+
       const visibleResults = data.results
         .filter((r: ExecuteResult) => !r.hidden)
         .map((r: ExecuteResult) => ({
@@ -307,8 +327,17 @@ public:
           error: r.error,
         }));
 
+      console.log("Visible results:", visibleResults);
+
+      const hiddenResults = data.results.filter((r: ExecuteResult) => r.hidden);
+      if (hiddenResults.length > 0) {
+        const hiddenPassed = hiddenResults.filter((r: ExecuteResult) => r.passed).length;
+        console.log(`Hidden: ${hiddenPassed}/${hiddenResults.length} passed`);
+      }
+
       setTestResults(visibleResults);
     } catch (e) {
+      setRunError(`Network error: ${e instanceof Error ? e.message : "Unknown error"}`);
       console.error("Failed to run code:", e);
     } finally {
       setIsRunning(false);
@@ -355,6 +384,14 @@ public:
           </span>
         </div>
         <div className="flex items-center space-x-3">
+          {currentProblemIndex > 0 && (
+            <button
+              onClick={() => setCurrentProblemIndex((i) => i - 1)}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
+            >
+              ← Prev
+            </button>
+          )}
           <span className="text-xs text-gray-500">
             {currentProblemIndex + 1} / {problems.length}
           </span>
@@ -363,7 +400,7 @@ public:
               onClick={() => setCurrentProblemIndex((i) => i + 1)}
               className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
             >
-              Next Question →
+              Next →
             </button>
           )}
           <select
@@ -463,30 +500,35 @@ public:
                   {problem.examples.length === 0 ? (
                     <p className="text-sm text-gray-500">No examples available.</p>
                   ) : (
-                    problem.examples.slice(0, 2).map((example, idx) => (
-                      <div key={idx} className="space-y-2">
-                        <h3 className="text-sm font-bold text-white">Example {idx + 1}:</h3>
-                        <div className="rounded-lg bg-gray-800/60 border border-gray-700 p-4 space-y-3">
-                          <div className="flex gap-3 items-start">
-                            <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
-                              Input:
-                            </span>
-                            <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
-                              {example.input}
-                            </pre>
-                          </div>
-                          <div className="border-t border-gray-700" />
-                          <div className="flex gap-3 items-start">
-                            <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
-                              Output:
-                            </span>
-                            <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
-                              {example.output}
-                            </pre>
+                    problem.examples
+                      .slice(0, 2)
+                      .filter(
+                        (example) => example.input.trim() !== "" || example.output.trim() !== "",
+                      )
+                      .map((example, idx) => (
+                        <div key={idx} className="space-y-2">
+                          <h3 className="text-sm font-bold text-white">Example {idx + 1}:</h3>
+                          <div className="rounded-lg bg-gray-800/60 border border-gray-700 p-4 space-y-3">
+                            <div className="flex gap-3 items-start">
+                              <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
+                                Input:
+                              </span>
+                              <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
+                                {example.input || "(none)"}
+                              </pre>
+                            </div>
+                            <div className="border-t border-gray-700" />
+                            <div className="flex gap-3 items-start">
+                              <span className="text-[#3ecf8e] text-sm font-semibold shrink-0 w-14">
+                                Output:
+                              </span>
+                              <pre className="text-sm text-white font-mono whitespace-pre-wrap leading-relaxed">
+                                {example.output || "(none)"}
+                              </pre>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))
                   )}
                 </div>
               </div>
@@ -567,7 +609,7 @@ public:
           </div>
 
           {/* Test Results Panel */}
-          {(testResults.length > 0 || isRunning) && (
+          {(testResults.length > 0 || isRunning || runError) && (
             <div className="h-64 border-t border-gray-800 bg-[#0f0f0f] overflow-y-auto">
               <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Test Results</h3>
@@ -581,12 +623,17 @@ public:
                   </span>
                 )}
               </div>
+
               <div className="p-4">
                 {isRunning ? (
                   <div className="flex items-center justify-center h-32 gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
                     <span className="text-sm text-gray-400">Running test cases...</span>
                   </div>
+                ) : runError ? (
+                  <pre className="text-xs text-red-300 font-mono whitespace-pre-wrap">
+                    {runError}
+                  </pre>
                 ) : (
                   <div className="space-y-3">
                     {testResults.map((result, idx) => (
