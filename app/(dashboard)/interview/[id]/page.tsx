@@ -51,6 +51,9 @@ export default async function InterviewSessionPage({
     questionScores: [],
   };
 
+  // Get interview type, default to 'technical' for backwards compatibility
+  const interviewType = (interview.interviewType as "technical" | "hr") || "technical";
+
   return (
     <InterviewSession
       interviewId={id}
@@ -60,6 +63,7 @@ export default async function InterviewSessionPage({
       initialStatus={interview.status as string}
       totalQuestions={initialAdaptiveState.totalQuestions}
       initialAdaptiveState={initialAdaptiveState}
+      interviewType={interviewType}
     />
   );
 }

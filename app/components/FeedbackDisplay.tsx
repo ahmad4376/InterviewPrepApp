@@ -1,4 +1,4 @@
-import { CheckCircle2, TrendingUp, Star } from "lucide-react";
+import { CheckCircle2, TrendingUp, Star, Award, UserCheck, XCircle } from "lucide-react";
 import type { InterviewFeedback } from "app/models/Interview";
 
 function LargeStarRating({ score }: { score: number }) {
@@ -295,7 +295,135 @@ function LegacyFeedbackDisplay({ feedback }: { feedback: InterviewFeedback }) {
   );
 }
 
+const RECOMMENDATION_CONFIG = {
+  hire: {
+    icon: UserCheck,
+    label: "Hire",
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    border: "border-green-500/30",
+    description:
+      "Candidate demonstrates strong soft skills and cultural alignment. Recommended to proceed.",
+  },
+  consider: {
+    icon: Award,
+    label: "Consider",
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+    description: "Candidate shows potential but has some concerns. May need further evaluation.",
+  },
+  reject: {
+    icon: XCircle,
+    label: "Reject",
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/30",
+    description: "Candidate does not meet the requirements for this position at this time.",
+  },
+};
+
+/** HR Interview format: HR-specific scores + recommendation */
+function HRFeedbackDisplay({ feedback }: { feedback: InterviewFeedback }) {
+  const hrEval = feedback.hrEvaluation!;
+  const recConfig = RECOMMENDATION_CONFIG[hrEval.recommendation];
+  const RecIcon = recConfig.icon;
+
+  return (
+    <div className="space-y-6">
+      {/* Recommendation Banner */}
+      <div className={`rounded-2xl border ${recConfig.border} ${recConfig.bg} p-6`}>
+        <div className="flex items-center gap-4">
+          <div className={`rounded-full p-3 ${recConfig.bg}`}>
+            <RecIcon size={32} className={recConfig.text} />
+          </div>
+          <div className="flex-1">
+            <h2 className={`text-2xl font-bold ${recConfig.text}`}>{recConfig.label}</h2>
+            <p className="text-gray-300 text-sm mt-1">{recConfig.description}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-400">Overall Score</p>
+            <p className={`text-3xl font-bold ${recConfig.text}`}>
+              {feedback.overallScore.toFixed(1)}/5
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+          Executive Summary
+        </h2>
+        <p className="text-gray-300 leading-relaxed">{feedback.summary}</p>
+      </div>
+
+      {/* HR Dimension Scores */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">
+          HR Evaluation Scores
+        </h2>
+        <div className="space-y-4">
+          <ScoreBar score={hrEval.communication} label="Communication" />
+          <ScoreBar score={hrEval.culturalFit} label="Cultural Fit" />
+          <ScoreBar score={hrEval.confidence} label="Confidence" />
+          <ScoreBar score={hrEval.clarity} label="Clarity" />
+          <ScoreBar score={hrEval.overallSuitability} label="Overall Suitability" />
+        </div>
+      </div>
+
+      {/* Detailed Feedback */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+          Detailed Assessment
+        </h2>
+        <div className="text-gray-300 leading-relaxed whitespace-pre-line">
+          {hrEval.structuredFeedback}
+        </div>
+      </div>
+
+      {/* Strengths & Improvements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-5">
+          <h2 className="text-sm font-medium text-green-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <CheckCircle2 size={16} />
+            Strengths
+          </h2>
+          <ul className="space-y-2">
+            {feedback.strengths.map((s, i) => (
+              <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                <span className="text-green-400 mt-0.5 shrink-0">+</span>
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
+          <h2 className="text-sm font-medium text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <TrendingUp size={16} />
+            Areas for Improvement
+          </h2>
+          <ul className="space-y-2">
+            {feedback.improvements.map((imp, i) => (
+              <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                <span className="text-amber-400 mt-0.5 shrink-0">&uarr;</span>
+                {imp}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FeedbackDisplay({ feedback }: { feedback: InterviewFeedback }) {
+  // Detect HR format: has hrEvaluation
+  if (feedback.hrEvaluation) {
+    return <HRFeedbackDisplay feedback={feedback} />;
+  }
+
   // Detect new format: has aggregateScores and questionScores
   const isNewFormat = !!feedback.aggregateScores && Array.isArray(feedback.questionScores);
 

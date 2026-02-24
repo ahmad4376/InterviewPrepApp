@@ -9,6 +9,7 @@ import { VoiceBotProvider, useVoiceBot } from "app/context/VoiceBotContextProvid
 import type { TranscriptEntry } from "app/models/Interview";
 import {
   buildAdaptiveInterviewConfig,
+  buildHRInterviewConfig,
   buildInterviewConfig,
   type InterviewQuestion,
 } from "app/lib/constants";
@@ -56,6 +57,7 @@ interface InterviewSessionProps {
   initialAdaptiveState?: AdaptiveState;
   apiBasePath?: string; // default: "/api/interviews"
   backUrl?: string; // default: "/dashboard"
+  interviewType?: "technical" | "hr"; // default: "technical"
 }
 
 export default function InterviewSession({
@@ -68,6 +70,7 @@ export default function InterviewSession({
   initialAdaptiveState,
   apiBasePath = "/api/interviews",
   backUrl = "/dashboard",
+  interviewType = "technical",
 }: InterviewSessionProps) {
   const router = useRouter();
   const [ending, setEnding] = useState(false);
@@ -82,8 +85,11 @@ export default function InterviewSession({
   // Use adaptive config if we have adaptive state, otherwise fall back to legacy
   const isAdaptive = !!initialAdaptiveState;
 
+  // Select the appropriate config based on interview type
   const stsConfig = isAdaptive
-    ? buildAdaptiveInterviewConfig(title, company, totalQuestions || questions.length)
+    ? interviewType === "hr"
+      ? buildHRInterviewConfig(title, company, totalQuestions || questions.length)
+      : buildAdaptiveInterviewConfig(title, company, totalQuestions || questions.length)
     : buildInterviewConfig(questions, title, company);
 
   // Adaptive state stored in ref — survives re-renders, no DB calls during interview
@@ -141,23 +147,43 @@ export default function InterviewSession({
         return { error: "No adaptive state available" };
       }
 
-      // Parse LLM's analysis — new format with numeric scores
-      const rawScores = args.scores as
-        | { correctness?: unknown; depth?: unknown; communication?: unknown }
-        | undefined;
-      const analysis: LlmAnalysis = {
-        scores: {
-          correctness: Number(rawScores?.correctness ?? 0),
-          depth: Number(rawScores?.depth ?? 0),
-          communication: Number(rawScores?.communication ?? 0),
-        },
-        next_action: (args.next_action as "move_on" | "go_deeper" | "clarify") || "move_on",
-        suggested_topics: Array.isArray(args.suggested_topics)
-          ? (args.suggested_topics as string[])
-          : [],
-        user_response_summary: (args.user_response_summary as string) || "",
-        rationale: (args.rationale as string) || "",
-      };
+      // Parse LLM's analysis — handle both technical and HR score formats
+      const rawScores = args.scores as Record<string, unknown> | undefined;
+
+      // For HR interviews, map communication/confidence/clarity to the standard format
+      // For technical interviews, use correctness/depth/communication
+      let analysis: LlmAnalysis;
+      if (interviewType === "hr") {
+        // HR scoring: communication, confidence, clarity → map to standard dimensions
+        analysis = {
+          scores: {
+            correctness: Number(rawScores?.communication ?? 0), // HR communication → correctness
+            depth: Number(rawScores?.confidence ?? 0), // HR confidence → depth
+            communication: Number(rawScores?.clarity ?? 0), // HR clarity → communication
+          },
+          next_action: (args.next_action as "move_on" | "go_deeper" | "clarify") || "move_on",
+          suggested_topics: Array.isArray(args.suggested_topics)
+            ? (args.suggested_topics as string[])
+            : [],
+          user_response_summary: (args.user_response_summary as string) || "",
+          rationale: (args.rationale as string) || "",
+        };
+      } else {
+        // Technical scoring: correctness, depth, communication (standard)
+        analysis = {
+          scores: {
+            correctness: Number(rawScores?.correctness ?? 0),
+            depth: Number(rawScores?.depth ?? 0),
+            communication: Number(rawScores?.communication ?? 0),
+          },
+          next_action: (args.next_action as "move_on" | "go_deeper" | "clarify") || "move_on",
+          suggested_topics: Array.isArray(args.suggested_topics)
+            ? (args.suggested_topics as string[])
+            : [],
+          user_response_summary: (args.user_response_summary as string) || "",
+          rationale: (args.rationale as string) || "",
+        };
+      }
 
       // Select next question using LLM's analysis (pure JS, no DB)
       const result = selectNextQuestion(state, analysis);
@@ -181,7 +207,7 @@ export default function InterviewSession({
       // action === "end"
       return { action: "end" };
     },
-    [],
+    [interviewType],
   );
 
   const handleEndInterview = async () => {

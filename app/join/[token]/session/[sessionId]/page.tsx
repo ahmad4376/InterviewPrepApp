@@ -27,7 +27,7 @@ export default async function CandidateSessionPage({
   if (!session) notFound();
 
   const interview = await Interview.findOne({ _id: session.interviewId })
-    .select("title company")
+    .select("title company interviewType")
     .lean();
 
   const pool = (session.questionPool as IPoolQuestion[]) || [];
@@ -49,6 +49,9 @@ export default async function CandidateSessionPage({
     questionScores: [],
   };
 
+  // Get interview type, default to 'technical' for backwards compatibility
+  const interviewType = (interview?.interviewType as "technical" | "hr") || "technical";
+
   return (
     <InterviewSession
       interviewId={sessionId}
@@ -60,6 +63,7 @@ export default async function CandidateSessionPage({
       initialAdaptiveState={initialAdaptiveState}
       apiBasePath="/api/candidate-sessions"
       backUrl={`/join/${token}`}
+      interviewType={interviewType}
     />
   );
 }
