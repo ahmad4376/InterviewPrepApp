@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
-import { generateFeedback, generateScoreSummary } from "app/lib/openai";
+import { generateFeedback, generateScoreSummary, evaluateHRInterview } from "app/lib/openai";
 import type { QuestionScore } from "app/lib/types";
 import Interview from "app/models/Interview";
 import type { TranscriptEntry } from "app/models/Interview";
@@ -122,10 +122,58 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
 
+    // Get interview type, default to 'technical' for backwards compatibility
+    const interviewType = (interview.interviewType as "technical" | "hr") || "technical";
+
     let feedback = null;
 
-    // New path: per-question scores available → lightweight summary
-    if (Array.isArray(questionScores) && questionScores.length > 0) {
+    // HR Interview path: Use dedicated HR evaluation
+    if (interviewType === "hr") {
+      try {
+        const hrEval = await evaluateHRInterview(
+          transcript,
+          interview.title as string,
+          interview.company as string,
+        );
+
+        // Calculate overall score from HR dimensions
+        const overallScore =
+          (hrEval.communication +
+            hrEval.culturalFit +
+            hrEval.confidence +
+            hrEval.clarity +
+            hrEval.overallSuitability) /
+          5;
+
+        feedback = {
+          overallScore,
+          summary: hrEval.summary,
+          aggregateScores: {
+            // Map HR scores to the standard format for backwards compatibility
+            correctness: hrEval.communication,
+            depth: hrEval.confidence,
+            communication: hrEval.clarity,
+          },
+          questionScores: questionScores ?? [],
+          strengths: hrEval.strengths,
+          improvements: hrEval.improvements,
+          hrEvaluation: {
+            communication: hrEval.communication,
+            culturalFit: hrEval.culturalFit,
+            confidence: hrEval.confidence,
+            clarity: hrEval.clarity,
+            overallSuitability: hrEval.overallSuitability,
+            recommendation: hrEval.recommendation,
+            structuredFeedback: hrEval.structuredFeedback,
+          },
+        };
+      } catch (err) {
+        console.error("HR evaluation failed:", err);
+      }
+    }
+
+    // Technical interview path: per-question scores available → lightweight summary
+    if (!feedback && Array.isArray(questionScores) && questionScores.length > 0) {
       try {
         const overallScore =
           questionScores.reduce((sum, qs) => sum + qs.overallScore, 0) / questionScores.length;

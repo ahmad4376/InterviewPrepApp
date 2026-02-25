@@ -93,8 +93,7 @@ function CreateInterviewForm() {
     setDescription("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (interviewType: "technical" | "hr") => {
     setError("");
     setLoading(true);
 
@@ -109,6 +108,7 @@ function CreateInterviewForm() {
           numQuestions,
           jobLevel,
           isMassInterview,
+          interviewType,
         }),
       });
 
@@ -188,7 +188,7 @@ function CreateInterviewForm() {
           Enter a job description and we&apos;ll generate tailored interview questions.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-5" noValidate>
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
               Job Title
@@ -315,14 +315,26 @@ function CreateInterviewForm() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 size={18} className="animate-spin" />}
-            {loading ? "Generating Questions..." : "Create Interview"}
-          </button>
+          <div className="flex gap-3 w-full">
+            <button
+              type="button"
+              disabled={loading || !title || !company || !description}
+              onClick={() => handleSubmit("hr")}
+              className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading ? "Generating..." : "Create HR Screening Interview"}
+            </button>
+            <button
+              type="button"
+              disabled={loading || !title || !company || !description}
+              onClick={() => handleSubmit("technical")}
+              className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading ? "Generating..." : "Create Technical Interview"}
+            </button>
+          </div>
 
           {loading && (
             <p className="text-center text-xs text-gray-500 animate-pulse">

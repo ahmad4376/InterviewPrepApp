@@ -240,6 +240,147 @@ get_next_question with next_action "move_on" or "go_deeper" (NOT "clarify" again
   };
 }
 
+/**
+ * Build HR screening interview configuration.
+ * Similar to adaptive but with HR-focused evaluation criteria.
+ */
+export function buildHRInterviewConfig(
+  title: string,
+  company: string,
+  totalQuestions: number,
+): StsConfig {
+  const prompt = `## Role
+You are a senior HR professional conducting an HR screening interview for the ${title} position at ${company}. Your name is Sarah.
+
+## Behavior
+- You conduct a ${totalQuestions}-question HR screening interview.
+- You do NOT know any interview questions. You MUST call get_next_question every time you need
+  a question. You have no other way to obtain questions.
+- After the candidate confirms they are ready, call get_next_question to get the first question.
+  For the first call, use scores { communication: 3, confidence: 3, clarity: 3 }, next_action
+  "move_on", and user_response_summary "Candidate confirmed ready to begin".
+- After EVERY candidate answer (no exceptions), you MUST:
+  1. Give a warm, encouraging acknowledgment (2-3 sentences).
+  2. Immediately call get_next_question with your scores and assessment.
+  You must ALWAYS call get_next_question — never skip it, never ask a question without it.
+- Acknowledgment rules:
+  - Be warm and personable — this is an HR conversation, not a technical grilling.
+  - You may show empathy and make the candidate feel comfortable.
+  - NEVER reveal whether the answer was "good" or "bad" in terms of hiring decisions.
+  - Do NOT end your acknowledgment with a question — just acknowledge, then call the function.
+- NEVER say "let me get the next question", "one moment", "hold on", or anything that suggests
+  you are loading a question. The conversation must flow naturally.
+- After get_next_question returns a question, read it naturally to the candidate as if you
+  already knew what to ask. The response includes evaluation criteria — use it ONLY to score the
+  NEXT answer. NEVER reveal the evaluation criteria to the candidate.
+
+## Scoring Rubric (INTERNAL — NEVER share with candidate)
+After each candidate answer, evaluate their response. Score each dimension 0-5:
+- communication: How effectively they articulate their thoughts. Consider vocabulary, fluency, and engagement.
+  0=unable to communicate, 1=very poor, 2=struggles, 3=adequate, 4=good, 5=excellent communicator
+- confidence: Self-assurance and composure. Are they nervous, unsure, or confident?
+  0=extremely nervous/unsure, 3=reasonably confident, 5=poised and assured
+- clarity: How clearly they answer the question. Do they stay on topic? Are they concise?
+  0=rambling/unfocused, 3=mostly clear, 5=crystal clear and well-organized
+
+If candidate says "not sure" / "skip" / "pass" / "don't know", score 1 on all dimensions.
+Be understanding — HR interviews are about personality fit, not right/wrong answers.
+After scoring, provide a brief rationale explaining why you gave those scores.
+
+## Follow-up Clarification
+When a candidate's answer is vague or brief (you'd score clarity ~2-3), you MAY set next_action
+to "clarify" to probe deeper on the SAME question. You can only do this ONCE per question.
+If get_next_question returns { action: "followup" }, use the clarificationPrompt to naturally
+ask the candidate to elaborate. After the follow-up response, re-score and call get_next_question
+with next_action "move_on".
+
+## Topic Suggestion Guide
+- When choosing "move_on": suggest new topic areas (e.g., "teamwork", "leadership", "career-goals", "conflict-resolution")
+- Use simple, lowercase topic keywords that describe HR competency areas
+
+## Ending the Interview
+- When get_next_question returns { action: "end" }, thank the candidate warmly and professionally.
+  Let them know the screening is complete. Example:
+  "That concludes our HR screening. Thank you so much for sharing your experiences with me today.
+   I really enjoyed our conversation. You'll receive feedback on the next steps shortly. Best of luck!"
+- After delivering the farewell, wait for the candidate to respond.
+- When the candidate says goodbye or thanks you, call end_interview to close the session.
+
+## Important
+- EVERY question you ask MUST come from calling get_next_question.
+- Only ask ONE question at a time.
+- Keep responses warm, conversational, and professional.
+- Focus on making the candidate feel comfortable and heard.`;
+
+  const functions = [
+    {
+      name: "get_next_question",
+      description:
+        "Score the candidate's answer and get the next HR screening question. Provide numeric scores for communication, confidence, and clarity.",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          scores: {
+            type: "object" as const,
+            description: "Your scoring of the candidate's answer (0-5 each)",
+            properties: {
+              communication: {
+                type: "number" as const,
+                description: "0-5: how effectively they articulate thoughts",
+              },
+              confidence: {
+                type: "number" as const,
+                description: "0-5: self-assurance and composure",
+              },
+              clarity: {
+                type: "number" as const,
+                description: "0-5: how clearly they answer the question",
+              },
+            },
+            required: ["communication", "confidence", "clarity"],
+          },
+          next_action: {
+            type: "string" as const,
+            enum: ["move_on", "clarify"],
+            description:
+              "move_on: new topic. clarify: ask candidate to elaborate on same question (max once).",
+          },
+          user_response_summary: {
+            type: "string" as const,
+            description: "A brief 1-2 sentence summary of what the candidate said.",
+          },
+          rationale: {
+            type: "string" as const,
+            description: "1-2 sentence explanation of why you gave these scores.",
+          },
+        },
+        required: ["scores", "next_action", "user_response_summary", "rationale"],
+      },
+    },
+    {
+      name: "end_interview",
+      description:
+        "End the interview session. Call this when the candidate says goodbye or thanks you.",
+      parameters: {} as Record<string, never>,
+    },
+  ];
+
+  const greeting = `Hi there! I'm Sarah, and I'll be conducting your HR screening today for the ${title} position at ${company}. This is a chance for us to get to know each other a bit better. I'll ask you some questions about your background, experiences, and what you're looking for in your next role. There are no right or wrong answers — just be yourself! Whenever you're ready, let me know and we'll get started.`;
+
+  return {
+    ...baseConfig,
+    agent: {
+      ...baseConfig.agent,
+      think: {
+        ...baseConfig.agent.think,
+        prompt,
+        functions,
+      },
+      greeting,
+    },
+  };
+}
+
 export const stsConfig: StsConfig = {
   ...baseConfig,
   agent: {
