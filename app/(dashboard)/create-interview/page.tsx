@@ -4,7 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ErrorBoundary from "../../components/ErrorBoundary";
-import { Loader2, Monitor, Server, Layers, BarChart3, Cloud, Briefcase, X } from "lucide-react";
+import {
+  Loader2,
+  Monitor,
+  Server,
+  Layers,
+  BarChart3,
+  Cloud,
+  Briefcase,
+  X,
+  Code,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Template {
@@ -116,6 +126,10 @@ function CreateInterviewForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCodingInterview = () => {
+    router.push("/coding-interview");
   };
 
   return (
@@ -316,6 +330,28 @@ function CreateInterviewForm() {
             </p>
           )}
         </form>
+
+        {/* Divider */}
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-[#0f0f0f] px-4 text-gray-500">or</span>
+          </div>
+        </div>
+
+        {/* Coding Interview Button */}
+        <button
+          onClick={handleCodingInterview}
+          className="w-full rounded-lg border border-[#3ecf8e] bg-transparent px-4 py-3 font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/10 inline-flex items-center justify-center gap-2"
+        >
+          <Code size={20} />
+          Create Coding Interview
+        </button>
+        <p className="text-center text-xs text-gray-500 mt-2">
+          Practice with LeetCode-style coding problems
+        </p>
       </div>
     </div>
   );
