@@ -1,123 +1,69 @@
-// import { NextRequest, NextResponse } from "next/server";
-// import { connectDB } from "app/lib/mongodb";
-// import { Problem } from "app/models/LeetcodeQuestion";
-
-// const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
-//   javascript: { language: "javascript", version: "18.15.0" },
-//   python: { language: "python", version: "3.10.0" },
-//   cpp: { language: "c++", version: "10.2.0" },
-// };
-
-// async function runOnPiston(sourceCode: string, language: string, stdin: string) {
-//   const lang = LANGUAGE_MAP[language];
-//   const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({
-//       language: lang ? lang.language : null,
-//       version: lang ? lang.version : null,
-//       files: [{ content: sourceCode }],
-//       stdin,
-//     }),
-//   });
-//   return res.json();
-// }
-
-// export async function POST(request: NextRequest) {
-//   try {
-//     await connectDB();
-
-//     const { code, language, problemId } = await request.json();
-
-//     if (!code || !language || !problemId) {
-//       return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
-//     }
-
-//     if (!LANGUAGE_MAP[language]) {
-//       return NextResponse.json({ success: false, error: "Unsupported language" }, { status: 400 });
-//     }
-
-//     const problem = await Problem.findOne({ id: problemId });
-//     if (!problem) {
-//       return NextResponse.json({ success: false, error: "Problem not found" }, { status: 404 });
-//     }
-
-//     if (problem.examples.length === 0) {
-//       return NextResponse.json({ success: false, error: "No test cases found" }, { status: 400 });
-//     }
-
-//     // With this:
-//     const fullInput = problem.examples[0]?.input ?? "";
-//     const fullExpected = (problem.examples[0]?.output ?? "").trim();
-
-//     if (!fullInput) {
-//       return NextResponse.json({ success: false, error: "No test cases found" }, { status: 400 });
-//     }
-
-//     const result = await runOnPiston(code, language, fullInput);
-//     const actualOutput = (result.run?.stdout ?? "").trim();
-//     const error = result.run?.stderr?.trim() || null;
-
-//     // Compare line by line so we can show per-case results
-//     const expectedLines = fullExpected
-//       .split("\n")
-//       .map((l: string) => l.trim())
-//       .filter(Boolean);
-//     const actualLines = actualOutput
-//       .split("\n")
-//       .map((l: string) => l.trim())
-//       .filter(Boolean);
-
-//     const inputLines = fullInput.trim().split("\n");
-//     const firstLine = inputLines[0]?.trim() ?? "";
-//     const t = parseInt(firstLine);
-
-//     // Replace the results mapping:
-//     const results = expectedLines.map((expected, idx) => ({
-//       testCase: idx + 1,
-//       passed: actualLines[idx] === expected,
-//       input: `Test case ${idx + 1} of ${isNaN(t) ? "?" : t}`,
-//       expected,
-//       output: actualLines[idx] ?? "(no output)",
-//       time: "N/A",
-//       error: idx === 0 ? error : null,
-//       hidden: idx >= 2,
-//     }));
-
-//     const allPassed = results.every((r) => r.passed);
-
-//     return NextResponse.json({ success: true, allPassed, results });
-//   } catch (error) {
-//     console.error("Execution error:", error);
-//     return NextResponse.json({ success: false, error: "Execution failed" }, { status: 500 });
-//   }
-// }
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "app/lib/mongodb";
 import { Problem } from "app/models/LeetcodeQuestion";
 
-const LANGUAGE_MAP: Record<string, { language: string; version: string }> = {
-  javascript: { language: "node", version: "16.3.0" },
-  python: { language: "python", version: "3.9.4" },
-  cpp: { language: "gcc", version: "10.2.0" },
+/** Maps frontend language names to Piston language identifiers */
+const LANGUAGE_ALIASES: Record<string, string> = {
+  javascript: "node",
+  python: "python",
+  cpp: "gcc",
 };
 
-const PISTON_URL = process.env.PISTON_API_URL || "http://localhost:2000/api/v2/execute";
+// Normalize: strip trailing slashes and any path, always use /api/v2
+const PISTON_HOST = (process.env.PISTON_API_URL || "http://localhost:2000")
+  .replace(/\/+$/, "")
+  .replace(/\/api\/v2(\/.*)?$/, "");
+const PISTON_EXEC_URL = `${PISTON_HOST}/api/v2/execute`;
+const PISTON_RUNTIMES_URL = `${PISTON_HOST}/api/v2/runtimes`;
+
+/** Cache of resolved language → version from Piston runtimes endpoint */
+let runtimeCache: Record<string, string> | null = null;
+
+async function resolveRuntimes(): Promise<Record<string, string>> {
+  if (runtimeCache) return runtimeCache;
+
+  const res = await fetch(PISTON_RUNTIMES_URL);
+  if (!res.ok) throw new Error(`Failed to fetch Piston runtimes: ${res.status}`);
+  const runtimes: { language: string; version: string; aliases?: string[] }[] = await res.json();
+
+  const map: Record<string, string> = {};
+  for (const rt of runtimes) {
+    map[rt.language] = rt.version;
+    for (const alias of rt.aliases ?? []) {
+      map[alias] = rt.version;
+    }
+  }
+  runtimeCache = map;
+  return map;
+}
+
+/** Normalize output for comparison: trim each line's trailing whitespace, normalize line endings */
+function normalizeOutput(s: string): string {
+  return s
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .trim();
+}
 
 async function runOnPiston(code: string, language: string, stdin: string) {
-  console.log(`[RUN ON PISTON] language=${language}, code ${code}`);
-  const lang = LANGUAGE_MAP[language];
-  if (!lang) throw new Error(`Unsupported language: ${language}`);
+  const pistonLang = LANGUAGE_ALIASES[language];
+  if (!pistonLang) throw new Error(`Unsupported language: ${language}`);
+
+  const runtimes = await resolveRuntimes();
+  const version = runtimes[pistonLang];
+  if (!version) throw new Error(`Runtime "${pistonLang}" not installed in Piston`);
 
   console.log(
-    `[PISTON REQUEST] language=${lang.language} version=${lang.version} stdin length=${stdin.length}`,
+    `[PISTON REQUEST] language=${pistonLang} version=${version} stdin length=${stdin.length}`,
   );
-  const response = await fetch(PISTON_URL, {
+  const response = await fetch(PISTON_EXEC_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      language: lang.language,
-      version: lang.version,
+      language: pistonLang,
+      version,
       files: [{ content: code }],
       stdin,
     }),
@@ -137,47 +83,47 @@ async function runOnPiston(code: string, language: string, stdin: string) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log("========== [EXECUTE] Route called ==========");
   try {
     await connectDB();
-    console.log("[EXECUTE] DB connected");
 
     const body = await request.json();
-    const { code, language, problemId, example_type } = body;
-    console.log(
-      `[EXECUTE] Request: problemId=${problemId}, language=${language}, code length=${code?.length}, example_type=${example_type}`,
-    );
+    const { code, language, problemId } = body;
 
-    if (!code || !language || !problemId || !example_type) {
-      console.log("[EXECUTE] Missing fields");
+    if (!code || !language || !problemId) {
       return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
     }
 
     const problem = await Problem.findOne({ id: problemId });
     if (!problem) {
-      console.log(`[EXECUTE] Problem not found for id: ${problemId}`);
       return NextResponse.json({ success: false, error: "Problem not found" }, { status: 404 });
     }
 
-    const examples = problem.examples || [];
-    console.log(`[EXECUTE] Found problem: ${problem.title}, examples count: ${examples.length}`);
+    // Block interactive problems
+    if (problem.is_interactive) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Interactive problems cannot be executed automatically.",
+        },
+        { status: 400 },
+      );
+    }
 
+    const examples = problem.examples || [];
     if (examples.length === 0) {
-      console.log("[EXECUTE] No examples/test cases");
       return NextResponse.json({ success: false, error: "No test cases" }, { status: 400 });
     }
 
     const results = [];
     for (let i = 0; i < examples.length; i++) {
       const ex = examples[i];
-      const rawInput = (ex?.input ?? "").trim(); // <-- Declare rawInput first
-      const expected = (ex?.output ?? "").trim(); // <-- Then expected
+      const rawInput = (ex?.input ?? "").trim();
+      const rawExpected = ex?.output ?? "";
 
-      // Now use rawInput to create the wrapped input
-      const firstLine = rawInput.split("\n")[0]?.trim() ?? "";
-      const looksLikeBatchHeader = /^\d+$/.test(firstLine) && rawInput.split("\n").length > 1;
-      const input = looksLikeBatchHeader ? rawInput : `1\n${rawInput}`;
-      console.log(`[TEST CASE ${i + 1}] input length=${input.length}, expected="${expected}"`);
+      // Send raw input as-is — templates now match the problem's has_t flag
+      const input = rawInput;
+
+      const expected = normalizeOutput(rawExpected);
 
       let output = "",
         error = null,
@@ -185,10 +131,10 @@ export async function POST(request: NextRequest) {
         passed = false;
       try {
         const result = await runOnPiston(code, language, input);
-        output = (result.run?.stdout ?? "").trim();
+        output = normalizeOutput(result.run?.stdout ?? "");
         const stderr = (result.run?.stderr ?? "").trim();
         const exitCode = result.run?.code;
-        time = result.run?.wall_time ?? "N/A";
+        time = result.run?.wall_time ? `${result.run.wall_time}s` : "N/A";
 
         if (exitCode !== 0 && exitCode !== undefined) {
           error = stderr || `Exit code: ${exitCode}`;
@@ -199,9 +145,6 @@ export async function POST(request: NextRequest) {
             error = stderr;
           }
         }
-        console.log(
-          `[TEST CASE ${i + 1}] output="${output}", time=${time}, passed=${passed}, error=${error ? "yes" : "no"}`,
-        );
       } catch (err: unknown) {
         error = err instanceof Error ? err.message : String(err);
         console.error(`[TEST CASE ${i + 1}] EXCEPTION: ${error}`);
@@ -210,7 +153,7 @@ export async function POST(request: NextRequest) {
       results.push({
         testCase: i + 1,
         passed,
-        input: rawInput.length > 200 ? rawInput.slice(0, 200) + "..." : rawInput, // rawInput is now defined
+        input: rawInput.length > 200 ? rawInput.slice(0, 200) + "..." : rawInput,
         expected,
         output: output || "(no output)",
         time,
@@ -220,8 +163,6 @@ export async function POST(request: NextRequest) {
     }
 
     const allPassed = results.every((r) => r.passed);
-    console.log(`[EXECUTE] All tests passed: ${allPassed}`);
-    console.log(`[EXECUTE] Returning ${results.length} results`);
 
     return NextResponse.json({
       success: true,

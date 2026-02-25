@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { connectDB } from "app/lib/mongodb";
 import { Problem } from "app/models/LeetcodeQuestion";
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB();
 
-    const problem = await Problem.findOne({ id: params.id });
+    const { id } = await params;
+    const problem = await Problem.findOne({ id });
 
     if (!problem) {
       return NextResponse.json({ success: false, error: "Problem not found" }, { status: 404 });

@@ -63,16 +63,73 @@ interface ExecuteResult {
   hidden: boolean;
 }
 
-function getDefaultTemplate(language: string): string {
-  switch (language) {
-    case "python":
-      return `import sys\ninput = sys.stdin.readline\n\ndef solve():\n    # Write your solution here\n    pass\n\nt = int(input())\nfor _ in range(t):\n    solve()`;
-    case "cpp":
-      return `#include <bits/stdc++.h>\nusing namespace std;\n\nvoid solve() {\n    // Write your solution here\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    int t;\n    cin >> t;\n    while (t--) solve();\n    return 0;\n}`;
-    case "javascript":
-    default:
-      return `const lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nlet idx = 0;\nconst t = parseInt(lines[idx++]);\n\nfor (let i = 0; i < t; i++) {\n    // Read input using lines[idx++]\n    // Write your solution here\n}`;
+function getDefaultTemplate(language: string, hasT: boolean): string {
+  if (hasT) {
+    switch (language) {
+      case "python":
+        return `import sys\ninput = sys.stdin.readline\n\ndef solve():\n    # Write your solution here\n    pass\n\nt = int(input())\nfor _ in range(t):\n    solve()`;
+      case "cpp":
+        return `#include <bits/stdc++.h>\nusing namespace std;\n\nvoid solve() {\n    // Write your solution here\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    int t;\n    cin >> t;\n    while (t--) solve();\n    return 0;\n}`;
+      case "javascript":
+      default:
+        return `const lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nlet idx = 0;\nconst t = parseInt(lines[idx++]);\n\nfor (let i = 0; i < t; i++) {\n    // Read input using lines[idx++]\n    // Write your solution here\n}`;
+    }
+  } else {
+    switch (language) {
+      case "python":
+        return `import sys\ninput = sys.stdin.readline\n\n# Write your solution here\n`;
+      case "cpp":
+        return `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    // Write your solution here\n    return 0;\n}`;
+      case "javascript":
+      default:
+        return `const lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nlet idx = 0;\n\n// Read input using lines[idx++]\n// Write your solution here\n`;
+    }
   }
+}
+
+/**
+ * Split a batch example (with t header) into individual test cases for display only.
+ * Returns up to 2 cases for the UI.
+ */
+function splitBatchForDisplay(examples: Example[], hasT: boolean): Example[] {
+  if (!hasT || examples.length !== 1) {
+    // Already individual examples or no t header — return as-is (up to 2)
+    return examples.filter((ex) => ex.input.trim() !== "" || ex.output.trim() !== "").slice(0, 2);
+  }
+
+  const single = examples[0]!;
+  const inputLines = single.input.split("\n").filter((l) => l.trim() !== "");
+  const outputLines = single.output.split("\n").filter((l) => l.trim() !== "");
+  const first = inputLines[0]?.trim() ?? "";
+  const t = parseInt(first, 10);
+
+  if (isNaN(t) || String(t) !== first || t <= 1) {
+    return [single];
+  }
+
+  const body = inputLines.slice(1);
+  const inferredLines = Math.max(1, Math.floor(body.length / t));
+  const outputPerCase = Math.max(1, Math.floor(outputLines.length / t));
+
+  // Only split if it divides evenly
+  if (body.length % inferredLines !== 0 || outputLines.length % outputPerCase !== 0) {
+    return [single];
+  }
+
+  const splitExamples: Example[] = [];
+  for (let i = 0; i < Math.min(t, 2); i++) {
+    const inp = body
+      .slice(i * inferredLines, (i + 1) * inferredLines)
+      .join("\n")
+      .trim();
+    const out = outputLines
+      .slice(i * outputPerCase, (i + 1) * outputPerCase)
+      .join("\n")
+      .trim();
+    if (inp || out) splitExamples.push({ input: inp, output: out });
+  }
+
+  return splitExamples.length > 0 ? splitExamples : [single];
 }
 
 function cleanStatementBody(raw: string): string {
@@ -178,8 +235,8 @@ export default function CodingInterviewPage() {
 
   useEffect(() => {
     if (!currentProblem) return;
-    setCode(getDefaultTemplate(language));
-  }, [language, currentProblem]); // getDefaultTemplate is now stable (outside component)
+    setCode(getDefaultTemplate(language, currentProblem.has_t));
+  }, [language, currentProblem]);
 
   const problem = currentProblem
     ? {
@@ -190,10 +247,7 @@ export default function CodingInterviewPage() {
         timeComplexity: "N/A",
         spaceComplexity: "N/A",
         description: cleanStatementBody(currentProblem.stmt_body),
-        examples: (() => {
-          const raw = currentProblem.examples ?? [];
-          return raw.filter((ex) => ex.input.trim() !== "" || ex.output.trim() !== "").slice(0, 2);
-        })(),
+        examples: splitBatchForDisplay(currentProblem.examples ?? [], currentProblem.has_t),
         constraints: currentProblem.tags.map((tag) => `Topic: ${tag}`),
       }
     : null;
@@ -253,7 +307,6 @@ export default function CodingInterviewPage() {
           code,
           language,
           problemId: currentProblem.id,
-          example_type: currentProblem.example_type,
         }),
       });
 
@@ -531,16 +584,12 @@ export default function CodingInterviewPage() {
                     </div>
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Runtime</p>
-                        <p className="text-lg font-bold text-white">142 ms</p>
-                        <p className="text-xs text-gray-600">faster than 67%</p>
-                      </div>
-                      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
-                        <p className="text-xs text-gray-500 mb-1">Memory</p>
-                        <p className="text-lg font-bold text-white">18.4 MB</p>
-                        <p className="text-xs text-gray-600">less than 52%</p>
+                        <p className="text-lg font-bold text-white">
+                          {testResults[0]?.time ?? "N/A"}
+                        </p>
                       </div>
                       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Test Cases</p>

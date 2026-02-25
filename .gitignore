@@ -44,3 +44,6 @@ deepgram_agent_docs.md
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Large dataset files
+app/lib/new_dataset.json
