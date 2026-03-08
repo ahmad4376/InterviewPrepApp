@@ -18,6 +18,17 @@ export interface IIOSchema {
   output_format?: string;
 }
 
+export interface ISolutions {
+  python?: string;
+  cpp?: string;
+  javascript?: string;
+}
+
+export interface IHiddenTest {
+  input: string;
+  output: string; // empty string until Piston validation is run later
+}
+
 export interface IProblem extends Document {
   id: string;
   title: string;
@@ -29,14 +40,16 @@ export interface IProblem extends Document {
   examples: IExample[];
   code_templates?: ICodeTemplates;
   io_schema?: IIOSchema;
-  has_t: boolean; // false if input has no leading t (test case count)
-  is_interactive: boolean; // true if problem uses ?/! query-response format
-  example_type: "batch" | "individual"; // batch = one object with all cases, individual = one object per case
+  has_t: boolean;
+  is_interactive: boolean;
+  example_type: "batch" | "individual";
+  solutions: ISolutions;
+  hidden_tests: IHiddenTest[];
 }
 
 const ExampleSchema: Schema = new Schema(
   {
-    input: { type: String, default: "" },
+    input:  { type: String, default: "" },
     output: { type: String, default: "" },
   },
   { _id: false },
@@ -45,37 +58,56 @@ const ExampleSchema: Schema = new Schema(
 const CodeTemplatesSchema: Schema = new Schema(
   {
     javascript: { type: String, default: null },
-    python: { type: String, default: null },
-    cpp: { type: String, default: null },
+    python:     { type: String, default: null },
+    cpp:        { type: String, default: null },
   },
   { _id: false },
 );
 
 const IOSchemaSchema: Schema = new Schema(
   {
-    input_type: { type: String, default: null },
-    output_type: { type: String, default: "string" },
-    input_format: { type: String, default: null },
+    input_type:    { type: String, default: null },
+    output_type:   { type: String, default: "string" },
+    input_format:  { type: String, default: null },
     output_format: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+const SolutionsSchema: Schema = new Schema(
+  {
+    python:     { type: String, default: "" },
+    cpp:        { type: String, default: "" },
+    javascript: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
+const HiddenTestSchema: Schema = new Schema(
+  {
+    input:  { type: String, required: true },
+    output: { type: String, default: "" },
   },
   { _id: false },
 );
 
 const ProblemSchema: Schema = new Schema(
   {
-    id: { type: String, required: true, unique: true },
-    title: { type: String, required: true },
-    tags: { type: [String], default: [] },
+    id:                { type: String, required: true, unique: true },
+    title:             { type: String, required: true },
+    tags:              { type: [String], default: [] },
     difficulty_bucket: { type: String, required: true },
-    time_limit: { type: String, default: null },
-    memory_limit: { type: String, default: null },
-    stmt_body: { type: String, required: true },
-    examples: { type: [ExampleSchema], default: [] },
-    code_templates: { type: CodeTemplatesSchema, default: () => ({}) },
-    io_schema: { type: IOSchemaSchema, default: () => ({}) },
-    has_t: { type: Boolean, default: true },
-    is_interactive: { type: Boolean, default: false },
-    example_type: { type: String, enum: ["batch", "individual"], default: "batch" },
+    time_limit:        { type: String, default: null },
+    memory_limit:      { type: String, default: null },
+    stmt_body:         { type: String, required: true },
+    examples:          { type: [ExampleSchema], default: [] },
+    code_templates:    { type: CodeTemplatesSchema, default: () => ({}) },
+    io_schema:         { type: IOSchemaSchema, default: () => ({}) },
+    has_t:             { type: Boolean, default: true },
+    is_interactive:    { type: Boolean, default: false },
+    example_type:      { type: String, enum: ["batch", "individual"], default: "batch" },
+    solutions:         { type: SolutionsSchema, default: () => ({}) },
+    hidden_tests:      { type: [HiddenTestSchema], default: [] },
   },
   {
     collection: "problems",
@@ -83,6 +115,7 @@ const ProblemSchema: Schema = new Schema(
   },
 );
 
-export const Problem: Model<IProblem> = mongoose.models.Problem
-  ? (mongoose.models.Problem as Model<IProblem>)
-  : mongoose.model<IProblem>("Problem", ProblemSchema);
+export const Problem: Model<IProblem> =
+  mongoose.models.Problem
+    ? (mongoose.models.Problem as Model<IProblem>)
+    : mongoose.model<IProblem>("Problem", ProblemSchema);

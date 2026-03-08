@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { code, language, problemId } = body;
+    const { code, language, problemId, includeHidden } = body;
+    console.log("hidden: ", includeHidden);
 
     if (!code || !language || !problemId) {
       return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
@@ -128,13 +129,20 @@ export async function POST(request: NextRequest) {
       let output = "",
         error = null,
         time = "N/A",
-        passed = false;
+        passed = false,
+        memory = 0;
       try {
+        const startTime = Date.now();
         const result = await runOnPiston(code, language, input);
+        const elapsed = Date.now() - startTime;
+
         output = normalizeOutput(result.run?.stdout ?? "");
         const stderr = (result.run?.stderr ?? "").trim();
         const exitCode = result.run?.code;
-        time = result.run?.wall_time ? `${result.run.wall_time}s` : "N/A";
+        const memoryKb: number = result.run?.memory ?? 0;
+
+        time = `${elapsed}ms`;
+        memory = memoryKb;
 
         if (exitCode !== 0 && exitCode !== undefined) {
           error = stderr || `Exit code: ${exitCode}`;
@@ -158,8 +166,64 @@ export async function POST(request: NextRequest) {
         output: output || "(no output)",
         time,
         error,
-        hidden: i >= 2,
+        hidden: includeHidden ? false : i >= 2,
       });
+    }
+
+    if (includeHidden) {
+      console.log("[HIDDEN] includeHidden=", includeHidden);
+      console.log("[HIDDEN] hidden_tests count=", problem.hidden_tests?.length ?? 0);
+      console.log("[HIDDEN] first hidden test=", JSON.stringify(problem.hidden_tests?.[0]));
+      const hiddenExamples = problem.hidden_tests ?? [];
+      for (let i = 0; i < hiddenExamples.length; i++) {
+        const ex = hiddenExamples[i];
+        const rawInput = (ex?.input ?? "").trim();
+        const expected = (ex?.output ?? "").trim();
+        if (!rawInput || !expected) continue;
+
+        const firstLine = rawInput.split("\n")[0]?.trim() ?? "";
+        const looksLikeBatch = /^\d+$/.test(firstLine) && rawInput.split("\n").length > 1;
+        const input = looksLikeBatch ? rawInput : `1\n${rawInput}`;
+
+        let output = "", error = null, passed = false, time="N/A", memory = 0;
+        try {
+          const startTime = Date.now();
+          const result = await runOnPiston(code, language, input);
+          const elapsed = Date.now() - startTime;
+
+          output = normalizeOutput(result.run?.stdout ?? "");
+          const stderr = (result.run?.stderr ?? "").trim();
+          const exitCode = result.run?.code;
+          const memoryKb: number = result.run?.memory ?? 0;
+
+          time = `${elapsed}ms`;
+          memory = memoryKb;
+
+          if (exitCode !== 0 && exitCode !== undefined) {
+            error = stderr || `Exit code: ${exitCode}`;
+            passed = false;
+          } else {
+            passed = output === expected;
+            if (stderr) {
+              error = stderr;
+            }
+          }
+        } catch (err: unknown) {
+          error = err instanceof Error ? err.message : String(err);
+          console.error(`[TEST CASE ${i + 1}] EXCEPTION: ${error}`);
+        }
+
+        results.push({
+          testCase: examples.length + i + 1,
+          passed,
+          input: rawInput.length > 200 ? rawInput.slice(0, 200) + "..." : rawInput,
+          expected,
+          output: output || "(no output)",
+          time: "N/A",
+          error,
+          hidden: true,
+        });
+      }
     }
 
     const allPassed = results.every((r) => r.passed);

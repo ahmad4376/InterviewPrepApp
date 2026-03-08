@@ -20,6 +20,7 @@ interface TestResult {
   output: string;
   expected: string;
   time: string;
+  memory?: number;
   error?: string | null;
 }
 
@@ -37,20 +38,13 @@ interface Problem {
   memory_limit?: string | null;
   stmt_body: string;
   examples: Example[];
-  code_templates?: {
-    javascript?: string;
-    python?: string;
-    cpp?: string;
-  };
-  io_schema?: {
-    input_type?: string;
-    output_type?: string;
-    input_format?: string;
-    output_format?: string;
-  };
+  code_templates?: { javascript?: string; python?: string; cpp?: string; };
+  io_schema?: { input_type?: string; output_type?: string; input_format?: string; output_format?: string; };
   has_t: boolean;
   is_interactive: boolean;
   example_type: "batch" | "individual";
+  solutions?: { python?: string; cpp?: string; javascript?: string; };
+  hidden_tests?: { input: string; output: string; }[];
 }
 
 interface ExecuteResult {
@@ -59,6 +53,7 @@ interface ExecuteResult {
   output: string;
   expected: string;
   time: string;
+  memory?: number;
   error: string | null;
   hidden: boolean;
 }
@@ -166,10 +161,6 @@ function cleanStatementBody(raw: string): string {
 
 export default function CodingInterviewPage() {
   const [language, setLanguage] = useState<"python" | "cpp" | "javascript">("javascript");
-  const [code, setCode] = useState(`function twoSum(nums, target) {
-    // Write your solution here
-    
-}`);
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "solution" | "submissions">(
     "description",
@@ -184,6 +175,16 @@ export default function CodingInterviewPage() {
   const [problemsLoading, setProblemsLoading] = useState(true);
 
   const [testPanel, setTestPanel] = useState(false);
+  const [solutionLang, setSolutionLang] = useState<"python" | "cpp" | "javascript">("python");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hiddenResults, setHiddenResults] = useState<{ passed: number; total: number } | null>(null);
+  const [lastAction, setLastAction] = useState<"run" | "submit" | null>(null);
+
+  const [code, setCode] = useState("");
+  const codeMapRef = useRef<Record<string, string>>({});
+  const currentCodeKey = useRef<string>("");
+  const getCodeKey = (problemId: string, lang: string) => `${problemId}-${lang}`;
 
   useEffect(() => {
     async function fetchProblems() {
@@ -215,28 +216,22 @@ export default function CodingInterviewPage() {
 
   const currentProblem = problems[currentProblemIndex];
 
-  // async function fetchFunctionSignature(
-  //   problemTitle: string,
-  //   stmtBody: string,
-  //   language: string
-  // ): Promise<string> {
-  //   try {
-  //     const res = await fetch("/api/leetcode/signature", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ problemTitle, stmtBody, language }),
-  //     });
-  //     const data = await res.json();
-  //     return data.signature ?? getDefaultTemplate(language);
-  //   } catch {
-  //     return getDefaultTemplate(language);
-  //   }
-  // }
-
   useEffect(() => {
     if (!currentProblem) return;
-    setCode(getDefaultTemplate(language, currentProblem.has_t));
-  }, [language, currentProblem]);
+    const key = getCodeKey(currentProblem.id, language);
+
+    // Only update editor if we actually switched to a different problem/language
+    if (key === currentCodeKey.current) return;
+    currentCodeKey.current = key;
+
+    if (codeMapRef.current[key] !== undefined) {
+      setCode(codeMapRef.current[key]);
+    } else {
+      const template = getDefaultTemplate(language, currentProblem.has_t);
+      codeMapRef.current[key] = template;
+      setCode(template);
+    }
+  }, [currentProblem?.id, language]);
 
   const problem = currentProblem
     ? {
@@ -297,41 +292,71 @@ export default function CodingInterviewPage() {
     if (currentProblem.is_interactive) return;
 
     setIsRunning(true);
+    setLastAction("run");
     setTestResults([]);
+    setHiddenResults(null);
+    setTestPanel(false);
 
     try {
       const res = await fetch("/api/leetcode/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          language,
-          problemId: currentProblem.id,
-        }),
+        body: JSON.stringify({ code, language, problemId: currentProblem.id }),
       });
-
       const data = await res.json();
-      console.log("[5] Response JSON:", JSON.stringify(data, null, 2));
-
       if (!data.success) return;
 
       const visibleResults = data.results
         .filter((r: ExecuteResult) => !r.hidden)
         .map((r: ExecuteResult) => ({
-          passed: r.passed,
-          input: r.input,
-          output: r.output,
-          expected: r.expected,
-          time: r.time,
-          error: r.error,
+          passed: r.passed, input: r.input, output: r.output,
+          expected: r.expected, time: r.time, error: r.error,
         }));
 
       setTestResults(visibleResults);
-      setIsRunning(false);
       setTestPanel(true);
     } catch (e) {
       console.error("[ERROR]", e);
+    } finally {
       setIsRunning(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!currentProblem) return;
+    if (currentProblem.is_interactive) return;
+
+    setIsSubmitting(true);
+    setLastAction("submit");
+    setTestResults([]);
+    setHiddenResults(null);
+    setTestPanel(false);
+
+    try {
+      const res = await fetch("/api/leetcode/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, language, problemId: currentProblem.id, includeHidden: true }),
+      });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const visibleResults = data.results
+        .filter((r: ExecuteResult) => !r.hidden)
+        .map((r: ExecuteResult) => ({
+          passed: r.passed, input: r.input, output: r.output,
+          expected: r.expected, time: r.time, error: r.error,
+        }));
+
+      const hidden = data.results.filter((r: ExecuteResult) => r.hidden);
+      setHiddenResults({ passed: hidden.filter((r: ExecuteResult) => r.passed).length, total: hidden.length });
+      setTestResults(visibleResults);
+      setTestPanel(true);
+      setActiveTab("submissions"); // only switch tabs on Submit
+    } catch (e) {
+      console.error("[SUBMIT ERROR]", e);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -380,6 +405,8 @@ export default function CodingInterviewPage() {
               onClick={() => {
                 setCurrentProblemIndex((i) => i - 1);
                 setTestResults([]);
+                setHiddenResults(null);
+                setTestPanel(false);
               }}
               className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-sm transition"
             >
@@ -540,61 +567,102 @@ export default function CodingInterviewPage() {
             )}
 
             {activeTab === "solution" && (
-              <div className="text-gray-400 text-center py-12">
-                <p>Official solution will appear here after you submit.</p>
+              <div className="space-y-4">
+                {!(currentProblem?.solutions?.python || currentProblem?.solutions?.cpp || currentProblem?.solutions?.javascript) ? (
+                  <div className="text-gray-400 text-center py-12">
+                    <p>No solution available for this problem.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-1 bg-gray-800/50 border border-gray-700 rounded-lg p-1 w-fit">
+                      {(["python", "cpp", "javascript"] as const).map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => setSolutionLang(lang)}
+                          disabled={!currentProblem?.solutions?.[lang]}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                            solutionLang === lang
+                              ? "bg-[#3ecf8e] text-black"
+                              : currentProblem?.solutions?.[lang]
+                              ? "text-gray-400 hover:text-gray-200"
+                              : "text-gray-600 cursor-not-allowed"
+                          }`}
+                        >
+                          {lang === "cpp" ? "C++" : lang === "javascript" ? "JavaScript" : "Python"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="rounded-lg bg-gray-900 border border-gray-700 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50">
+                        <span className="text-xs text-gray-400 font-mono">
+                          {solutionLang === "cpp" ? "C++" : solutionLang === "javascript" ? "JavaScript" : "Python"}
+                        </span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(currentProblem?.solutions?.[solutionLang] ?? "")}
+                          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <pre className="text-xs text-gray-300 font-mono p-4 overflow-x-auto overflow-y-auto max-h-[60vh] whitespace-pre leading-relaxed">
+                        {currentProblem?.solutions?.[solutionLang] || "No solution available for this language."}
+                      </pre>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
             {activeTab === "submissions" && (
               <div className="space-y-4">
-                {testResults.length === 0 ? (
+                {testResults.length === 0 || lastAction === "run" ? (
                   <div className="text-center py-12">
                     <div className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center mx-auto mb-3">
                       <Play className="w-5 h-5 text-gray-500" />
                     </div>
                     <p className="text-sm text-gray-500">No submissions yet.</p>
-                    <p className="text-xs text-gray-600 mt-1">Run your code to see results here.</p>
+                    <p className="text-xs text-gray-600 mt-1">Click Submit to evaluate your code.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Status Banner */}
-                    <div
-                      className={`rounded-lg px-4 py-3 flex items-center gap-3 ${
-                        testResults.every((r) => r.passed)
-                          ? "bg-green-500/10 border border-green-500/20"
-                          : "bg-red-500/10 border border-red-500/20"
-                      }`}
-                    >
-                      {testResults.every((r) => r.passed) ? (
+                    <div className={`rounded-lg px-4 py-3 flex items-center gap-3 ${
+                      testResults.every((r) => r.passed) && (hiddenResults?.passed ?? 0) === (hiddenResults?.total ?? 0)
+                        ? "bg-green-500/10 border border-green-500/20"
+                        : "bg-red-500/10 border border-red-500/20"
+                    }`}>
+                      {testResults.every((r) => r.passed) && (hiddenResults?.passed ?? 0) === (hiddenResults?.total ?? 0) ? (
                         <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
                       ) : (
                         <XCircle className="w-5 h-5 text-red-400 shrink-0" />
                       )}
                       <div>
-                        <p
-                          className={`text-sm font-semibold ${testResults.every((r) => r.passed) ? "text-green-400" : "text-red-400"}`}
-                        >
-                          {testResults.every((r) => r.passed) ? "Accepted" : "Wrong Answer"}
+                        <p className={`text-sm font-semibold ${
+                          testResults.every((r) => r.passed) && (hiddenResults?.passed ?? 0) === (hiddenResults?.total ?? 0)
+                            ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {testResults.every((r) => r.passed) && (hiddenResults?.passed ?? 0) === (hiddenResults?.total ?? 0)
+                            ? "Accepted" : "Wrong Answer"}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {testResults.filter((r) => r.passed).length} / {testResults.length} test
-                          cases passed
+                          {testResults.filter((r) => r.passed).length + (hiddenResults?.passed ?? 0)}
+                          {" / "}
+                          {testResults.length + (hiddenResults?.total ?? 0)} test cases passed
                         </p>
                       </div>
                     </div>
 
-                    {/* Stats Row */}
+                    {/* Stats Row — 2 columns, no Memory */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Runtime</p>
-                        <p className="text-lg font-bold text-white">
-                          {testResults[0]?.time ?? "N/A"}
-                        </p>
+                        <p className="text-lg font-bold text-white">{testResults[0]?.time ?? "N/A"}</p>
                       </div>
                       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
                         <p className="text-xs text-gray-500 mb-1">Test Cases</p>
                         <p className="text-lg font-bold text-white">
-                          {testResults.filter((r) => r.passed).length}/{testResults.length}
+                          {testResults.filter((r) => r.passed).length + (hiddenResults?.passed ?? 0)}
+                          /{testResults.length + (hiddenResults?.total ?? 0)}
                         </p>
                         <p className="text-xs text-gray-600">passed</p>
                       </div>
@@ -613,15 +681,9 @@ export default function CodingInterviewPage() {
                       <p className="text-xs text-gray-500 mb-2 font-medium">Submitted Code</p>
                       <div className="relative rounded-lg bg-gray-900 border border-gray-700 overflow-hidden">
                         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50">
-                          <span className="text-xs text-gray-400 font-mono capitalize">
-                            {language}
-                          </span>
-                          <button
-                            onClick={() => navigator.clipboard.writeText(code)}
-                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                          >
-                            Copy
-                          </button>
+                          <span className="text-xs text-gray-400 font-mono capitalize">{language}</span>
+                          <button onClick={() => navigator.clipboard.writeText(code)}
+                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors">Copy</button>
                         </div>
                         <pre className="text-xs text-gray-300 font-mono p-4 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre leading-relaxed">
                           {code}
@@ -654,23 +716,42 @@ export default function CodingInterviewPage() {
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-400">Code</span>
             </div>
-            <button
-              onClick={handleRun}
-              disabled={isRunning || currentProblem?.is_interactive === true}
-              className="bg-[#3ecf8e] hover:bg-[#36be81] text-black px-4 py-1.5 rounded-md text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isRunning ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Running...</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  <span>Run Code</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRun}
+                disabled={isRunning || isSubmitting || currentProblem?.is_interactive === true}
+                className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 px-4 py-1.5 rounded-md text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Running...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    <span>Run Code</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isRunning || isSubmitting || currentProblem?.is_interactive === true}
+                className="bg-[#3ecf8e] hover:bg-[#36be81] text-black px-4 py-1.5 rounded-md text-sm font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Submit</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Code Editor */}
@@ -679,7 +760,14 @@ export default function CodingInterviewPage() {
               height="100%"
               language={language}
               value={code}
-              onChange={(value) => setCode(value || "")}
+              onChange={(value) => {
+                const newCode = value || "";
+                setCode(newCode);
+                if (currentProblem) {
+                  const key = getCodeKey(currentProblem.id, language);
+                  codeMapRef.current[key] = newCode;
+                }
+              }}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },
@@ -700,22 +788,30 @@ export default function CodingInterviewPage() {
             <div className="h-64 border-t border-gray-800 bg-[#0f0f0f] overflow-y-auto">
               <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Test Results</h3>
-                {!isRunning && testResults.length > 0 && (
-                  <span
-                    className={`text-xs font-medium ${
-                      testResults.every((r) => r.passed) ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {testResults.filter((r) => r.passed).length}/{testResults.length} passed
-                  </span>
-                )}
+                <div className="flex items-center gap-3">
+                  {lastAction === "submit" && hiddenResults && (
+                    <span className="text-xs text-gray-400">
+                      Hidden:{" "}
+                      <span className={hiddenResults.passed === hiddenResults.total ? "text-green-400" : "text-yellow-400"}>
+                        {hiddenResults.passed} / {hiddenResults.total}
+                      </span>{" "}passed
+                    </span>
+                  )}
+                  {!isRunning && !isSubmitting && testResults.length > 0 && (
+                    <span className={`text-xs font-medium ${testResults.every((r) => r.passed) ? "text-green-400" : "text-red-400"}`}>
+                      {testResults.filter((r) => r.passed).length}/{testResults.length} visible passed
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="p-4">
-                {isRunning && (
+                {(isRunning || isSubmitting) && (
                   <div className="flex items-center justify-center h-32 gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
-                    <span className="text-sm text-gray-400">Running test cases...</span>
+                    <span className="text-sm text-gray-400">
+                      {isSubmitting ? "Submitting and running all test cases..." : "Running test cases..."}
+                    </span>
                   </div>
                 )}
                 {testPanel && (
@@ -794,6 +890,22 @@ export default function CodingInterviewPage() {
                         </div>
                       </div>
                     ))}
+                    {lastAction === "submit" && hiddenResults && hiddenResults.passed < hiddenResults.total && (
+                      <div className="rounded-lg border border-red-500/20 overflow-hidden">
+                        <div className="px-3 py-2 flex items-center gap-2 bg-red-500/10">
+                          <XCircle className="w-4 h-4 text-red-400" />
+                          <span className="text-sm font-medium text-red-400">
+                            Wrong Answer — Hidden Test Case
+                          </span>
+                        </div>
+                        <div className="bg-gray-900 p-3">
+                          <p className="text-xs text-gray-500 italic">
+                            Hidden test case details are not shown to preserve test integrity.
+                            {" "}{hiddenResults.total - hiddenResults.passed} hidden test(s) failed.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
