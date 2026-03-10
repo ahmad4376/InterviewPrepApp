@@ -346,9 +346,18 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
 const KNOWN_NO_T = new Set(["2181H", "2172K", "2145E"]);
 
 const KNOWN_INTERACTIVE = new Set([
-  "2193G", "2190C", "2179G", "2178E", "2178D",
-  "2171F", "2170D", "2165C", "2164D", "2163D1",
-  "2162G", "2162D",
+  "2193G",
+  "2190C",
+  "2179G",
+  "2178E",
+  "2178D",
+  "2171F",
+  "2170D",
+  "2165C",
+  "2164D",
+  "2163D1",
+  "2162G",
+  "2162D",
 ]);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -378,11 +387,7 @@ type RawProblem = {
 // ─── String cleaning ──────────────────────────────────────────────────────────
 
 function cleanInput(s: string): string {
-  return s
-    .replace(/\r\n/g, "\n")
-    .replace(/^\n+/, "")
-    .replace(/\n+$/, "")
-    .trim();
+  return s.replace(/\r\n/g, "\n").replace(/^\n+/, "").replace(/\n+$/, "").trim();
 }
 
 function cleanOutput(s: string): string {
@@ -414,12 +419,19 @@ function detectInteractive(_input: string, output: string): boolean {
 }
 
 function detectOutputType(output: string): "string" | "float" | "yes_no" {
-  const lines = output.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = output
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length === 0) return "string";
-  if (lines.some((l) => { const n = parseFloat(l); return !isNaN(n) && l.includes("."); }))
+  if (
+    lines.some((l) => {
+      const n = parseFloat(l);
+      return !isNaN(n) && l.includes(".");
+    })
+  )
     return "float";
-  if (lines.every((l) => ["yes", "no"].includes(l.toLowerCase())))
-    return "yes_no";
+  if (lines.every((l) => ["yes", "no"].includes(l.toLowerCase()))) return "yes_no";
   return "string";
 }
 
@@ -439,7 +451,7 @@ function normalizeExamples(raw: unknown): {
     raw.every((x) => x && typeof x === "object" && ("input" in x || "output" in x))
   ) {
     rawPairs = (raw as { input?: unknown; output?: unknown }[]).map((obj) => ({
-      input:  String(obj.input  ?? ""),
+      input: String(obj.input ?? ""),
       output: String(obj.output ?? ""),
     }));
   } else if (raw && typeof raw === "object" && ("input" in raw || "output" in raw)) {
@@ -450,7 +462,7 @@ function normalizeExamples(raw: unknown): {
   }
 
   const cleaned = rawPairs.map((p) => ({
-    input:  cleanInput(p.input),
+    input: cleanInput(p.input),
     output: cleanOutput(p.output),
   }));
 
@@ -470,7 +482,7 @@ function normalizeHiddenTests(raw: unknown): { input: string; output: string }[]
   return raw
     .filter((x) => x && typeof x === "object" && "input" in x)
     .map((x) => ({
-      input:  cleanInput(String((x as { input?: unknown }).input   ?? "")),
+      input: cleanInput(String((x as { input?: unknown }).input ?? "")),
       output: cleanOutput(String((x as { output?: unknown }).output ?? "")),
     }))
     .filter((x) => x.input.trim() !== "");
@@ -490,17 +502,17 @@ function parseStatement(mdRaw?: string | null) {
   const md = String(mdRaw).replace(/\r\n/g, "\n");
 
   const timeRe = /time limit per test[\s\S]{0,80}?([0-9]+(?:\.[0-9]+)?\s*(?:seconds?|s))/i;
-  const memRe  = /memory limit per test[\s\S]{0,80}?([0-9]+(?:\.[0-9]+)?\s*(?:megabytes?|mb))/i;
+  const memRe = /memory limit per test[\s\S]{0,80}?([0-9]+(?:\.[0-9]+)?\s*(?:megabytes?|mb))/i;
 
   const timeMatch = md.match(timeRe);
-  const memMatch  = md.match(memRe);
+  const memMatch = md.match(memRe);
 
-  const time   = timeMatch?.[1]?.trim() ?? null;
-  const memory = memMatch?.[1]?.trim()  ?? null;
+  const time = timeMatch?.[1]?.trim() ?? null;
+  const memory = memMatch?.[1]?.trim() ?? null;
 
   let body = md;
   if (timeMatch) body = body.replace(timeMatch[0], "");
-  if (memMatch)  body = body.replace(memMatch[0],  "");
+  if (memMatch) body = body.replace(memMatch[0], "");
 
   const cutRe = /(Input\s*$|input\s*$|Output\s*$|output\s*$|Example\s*$|Examples\s*$|Note\s*$)/im;
   const idx = body.search(cutRe);
@@ -559,9 +571,11 @@ async function main() {
     const difficulty =
       rec.difficulty_bucket ??
       (rec.cf_rating !== null && rec.cf_rating !== undefined
-        ? rec.cf_rating <= 1200 ? "easy"
-        : rec.cf_rating <= 1700 ? "medium"
-        : "hard"
+        ? rec.cf_rating <= 1200
+          ? "easy"
+          : rec.cf_rating <= 1700
+            ? "medium"
+            : "hard"
         : "unknown");
 
     const parsed = parseStatement(rec.statement_markdown);
@@ -573,9 +587,7 @@ async function main() {
       continue;
     }
 
-    const allEmpty = examples.every(
-      (ex) => ex.input.trim() === "" && ex.output.trim() === ""
-    );
+    const allEmpty = examples.every((ex) => ex.input.trim() === "" && ex.output.trim() === "");
     if (allEmpty) {
       console.log(`SKIP ${id} — all examples empty`);
       skipped++;
@@ -587,14 +599,13 @@ async function main() {
 
     const firstExample = examples[0]!;
     const is_interactive =
-      KNOWN_INTERACTIVE.has(id) ||
-      detectInteractive(firstExample.input, firstExample.output);
+      KNOWN_INTERACTIVE.has(id) || detectInteractive(firstExample.input, firstExample.output);
 
     const output_type = detectOutputType(examples.map((e) => e.output).join("\n"));
 
     const solutions = {
-      python:     String(rec.solutions?.python     ?? ""),
-      cpp:        String(rec.solutions?.cpp        ?? ""),
+      python: String(rec.solutions?.python ?? ""),
+      cpp: String(rec.solutions?.cpp ?? ""),
       javascript: String(rec.solutions?.javascript ?? ""),
     };
 
@@ -605,15 +616,15 @@ async function main() {
       title,
       tags,
       difficulty_bucket: difficulty,
-      time_limit:   parsed.time,
+      time_limit: parsed.time,
       memory_limit: parsed.memory,
       stmt_body: parsed.body || String(rec.statement_markdown ?? "").trim(),
       examples,
       code_templates: {},
       io_schema: {
-        input_type:    "unknown",
+        input_type: "unknown",
         output_type,
-        input_format:  "",
+        input_format: "",
         output_format: "",
       },
       has_t,
