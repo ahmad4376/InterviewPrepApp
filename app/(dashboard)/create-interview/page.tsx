@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ErrorBoundary from "../../components/ErrorBoundary";
+import ResumeUpload from "../../components/ResumeUpload";
 import { Loader2, Monitor, Server, Layers, BarChart3, Cloud, Briefcase, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { ResumeData } from "app/lib/resumeParser";
 
 interface Template {
   name: string;
@@ -70,6 +72,7 @@ function CreateInterviewForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template.name);
@@ -99,6 +102,7 @@ function CreateInterviewForm() {
           numQuestions,
           jobLevel,
           isMassInterview,
+          resumeData,
         }),
       });
 
@@ -175,7 +179,10 @@ function CreateInterviewForm() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
+          {/* Resume Upload Section */}
+          <ResumeUpload onResumeData={setResumeData} disabled={loading} />
+
+          <div className="border-t border-white/10 pt-5">
             <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
               Job Title
             </label>

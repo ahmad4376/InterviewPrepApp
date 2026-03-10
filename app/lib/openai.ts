@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import type { TranscriptEntry, InterviewFeedback } from "app/models/Interview";
 import type { QuestionScore } from "./types";
 import type { IPoolQuestion } from "./types";
+import type { ResumeData } from "./resumeParser";
+import { formatResumeForPrompt } from "./resumeParser";
 
 export interface GeneratedQuestion {
   text: string;
@@ -131,16 +133,46 @@ export async function generatePoolQuestions(
   jobTitle: string,
   jobDescription: string,
   count: number = 10,
+  resumeData?: ResumeData | null,
 ): Promise<IPoolQuestion[]> {
   const openai = getClient();
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert technical interviewer. Generate exactly ${count} open-ended interview questions for a voice interview. Each question should cover a different skill area relevant to the job. Vary difficulty from 1 (basic) to 5 (expert).
+  // Build resume context if available
+  const resumeContext = resumeData ? formatResumeForPrompt(resumeData) : null;
+
+  // Enhanced system prompt when resume is provided
+  const systemContent = resumeContext
+    ? `You are an expert technical interviewer. Generate exactly ${count} open-ended interview questions for a voice interview.
+
+You have been provided with the candidate's resume. Generate PERSONALIZED questions that:
+1. Probe into their specific projects and technologies they've worked with
+2. Ask about challenges they faced in their listed experience
+3. Dive deeper into skills they claim to have
+4. Connect their background to the job requirements
+5. Verify the depth of their knowledge in listed technologies
+
+Return JSON in this exact format:
+{
+  "questions": [
+    {
+      "question_title": "Short descriptive title",
+      "question_text": "The full interview question to ask verbally",
+      "answer_text": "Brief expected answer covering key points (2-3 sentences)",
+      "tags": ["lowercase-tag1", "lowercase-tag2"],
+      "difficulty_score": 3
+    }
+  ]
+}
+
+Rules:
+- At least 60% of questions should be personalized based on the resume
+- Reference specific projects, companies, or technologies from their resume
+- Each question MUST have 2-4 tags as lowercase keywords
+- difficulty_score must be an integer from 1 to 5
+- Include at least one question at each difficulty level (1 through 5)
+- Questions should be suitable for a verbal/voice interview (not coding exercises)
+- Make questions feel natural for conversation, not like reading from a list`
+    : `You are an expert technical interviewer. Generate exactly ${count} open-ended interview questions for a voice interview. Each question should cover a different skill area relevant to the job. Vary difficulty from 1 (basic) to 5 (expert).
 
 Return JSON in this exact format:
 {
@@ -160,11 +192,24 @@ Rules:
 - difficulty_score must be an integer from 1 to 5
 - Include at least one question at each difficulty level (1 through 5)
 - Cover diverse topics relevant to the job description
-- Questions should be suitable for a verbal/voice interview (not coding exercises)`,
+- Questions should be suitable for a verbal/voice interview (not coding exercises)`;
+
+  // Build user content
+  const userContent = resumeContext
+    ? `Job Title: ${jobTitle}\n\nJob Description: ${jobDescription}\n\n--- CANDIDATE'S RESUME ---\n${resumeContext}`
+    : `Job Title: ${jobTitle}\n\nJob Description: ${jobDescription}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: systemContent,
       },
       {
         role: "user",
-        content: `Job Title: ${jobTitle}\n\nJob Description: ${jobDescription}`,
+        content: userContent,
       },
     ],
   });

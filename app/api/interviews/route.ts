@@ -6,6 +6,7 @@ import { selectQuestions } from "app/lib/questionSelection";
 import { buildSamplingPlan } from "app/lib/sampling";
 import Interview from "app/models/Interview";
 import type { IPoolQuestion } from "app/lib/types";
+import type { ResumeData } from "app/lib/resumeParser";
 
 const DEFAULT_QUESTIONS = 5;
 const MAX_QUESTIONS = 20;
@@ -48,6 +49,11 @@ export async function POST(request: Request) {
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
 
+  // Extract optional resume data
+  const rawResumeData = (body as { resumeData?: unknown }).resumeData;
+  const resumeData: ResumeData | null =
+    rawResumeData && typeof rawResumeData === "object" ? (rawResumeData as ResumeData) : null;
+
   // Validate jobLevel
   const VALID_JOB_LEVELS = ["associate", "junior", "mid", "senior", "lead"];
   const rawJobLevel = (body as { jobLevel?: string }).jobLevel;
@@ -83,7 +89,7 @@ export async function POST(request: Request) {
     console.log(
       `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
     );
-    questionPool = await generatePoolQuestions(title, description, poolSize);
+    questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
   }
 
   const totalQuestions = Math.min(numQuestions, questionPool.length);
@@ -110,6 +116,8 @@ export async function POST(request: Request) {
     jobLevel,
     questions: displayQuestions,
     status: "scheduled",
+    // Candidate resume data
+    resumeData,
     // Adaptive state
     questionPool,
     samplingPlan,

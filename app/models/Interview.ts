@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import type { Document } from "mongoose";
 import type { IPoolQuestion } from "app/lib/types";
+import type { ResumeData } from "app/lib/resumeParser";
 
 export interface IQuestion {
   text: string;
@@ -53,6 +54,8 @@ export interface IInterview extends Document {
   questions: IQuestion[];
   jobLevel: string | null;
   status: "scheduled" | "in-progress" | "completed";
+  // Candidate resume data (optional)
+  resumeData: ResumeData | null;
   // Adaptive interview state
   questionPool: IPoolQuestion[];
   samplingPlan: number[];
@@ -97,6 +100,8 @@ const interviewSchema = new Schema<IInterview>(
       enum: ["scheduled", "in-progress", "completed"],
       default: "scheduled",
     },
+    // Candidate resume data
+    resumeData: { type: Schema.Types.Mixed, default: null },
     // Adaptive interview state
     questionPool: { type: Schema.Types.Mixed, default: [] },
     samplingPlan: { type: [Number], default: [] },
