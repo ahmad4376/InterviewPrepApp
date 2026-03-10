@@ -374,8 +374,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     },
   });
 
-  const chunks: Uint8Array[] = [];
-  doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
+  const chunks: BlobPart[] = [];
+  doc.on("data", (chunk: BlobPart) => chunks.push(chunk));
 
   // ========== COVER PAGE ==========
   doc.rect(0, 0, doc.page.width, 80).fill("#111827");
@@ -605,13 +605,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   doc.end();
 
   // Collect all chunks into a buffer
-  const pdfBuffer = await new Promise<Buffer>((resolve) => {
+  const pdfBlob = await new Promise<Blob>((resolve) => {
     doc.on("end", () => {
-      resolve(Buffer.concat(chunks as unknown as Buffer[]));
+      resolve(new Blob(chunks, { type: "application/pdf" }));
     });
   });
 
-  return new Response(pdfBuffer as unknown as BodyInit, {
+  return new Response(pdfBlob, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="Interview_Report_${id.substring(0, 8)}.pdf"`,
