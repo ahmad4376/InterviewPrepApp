@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-prep-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: interview-prep-app
+  template:
+    metadata:
+      labels:
+        app: interview-prep-app
+    spec:
+      containers:
+        - name: interview-prep-app
+          image: ghcr.io/haidervirk/interview-prep-app:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+              value: "12345678"
+            - name: CLERK_SECRET_KEY
+              value: "12345678"
+      imagePullSecrets:
+        - name: ghcr-secret
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
