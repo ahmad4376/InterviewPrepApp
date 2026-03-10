@@ -504,8 +504,8 @@ export async function GET(
   // Finalize
   doc.end();
 
-  const pdfBuffer = await new Promise<Buffer>((resolve) => {
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+  const pdfBuffer = await new Promise<Uint8Array>((resolve) => {
+    doc.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
   });
 
   return new Response(pdfBuffer, {
