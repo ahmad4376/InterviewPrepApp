@@ -505,7 +505,7 @@ export async function GET(
   doc.end();
 
   const pdfBuffer = await new Promise<Buffer>((resolve) => {
-    doc.on("end", () => resolve(Buffer.concat(chunks as Buffer[])));
+    doc.on("end", () => resolve(Buffer.concat(chunks as unknown as Buffer[])));
   });
 
   return new Response(pdfBuffer as unknown as BodyInit, {

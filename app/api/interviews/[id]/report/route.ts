@@ -607,7 +607,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Collect all chunks into a buffer
   const pdfBuffer = await new Promise<Buffer>((resolve) => {
     doc.on("end", () => {
-      resolve(Buffer.concat(chunks as Buffer[]));
+      resolve(Buffer.concat(chunks as unknown as Buffer[]));
     });
   });
 
