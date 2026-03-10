@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -47,3 +49,6 @@ deepgram_agent_docs.md
 
 # Large dataset files
 app/lib/new_dataset.json
+
+# LeetCode fetcher scripts & data
+scripts/leetcode-fetcher/

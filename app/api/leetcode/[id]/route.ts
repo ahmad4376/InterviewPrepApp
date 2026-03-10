@@ -7,7 +7,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     await connectDB();
 
     const { id } = await params;
-    const problem = await Problem.findOne({ id });
+    const problem = (await Problem.findOne({ titleSlug: id })) ?? (await Problem.findOne({ id }));
 
     if (!problem) {
       return NextResponse.json({ success: false, error: "Problem not found" }, { status: 404 });
