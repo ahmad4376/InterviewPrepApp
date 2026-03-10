@@ -395,8 +395,8 @@ export async function GET(
     },
   });
 
-  const chunks: Buffer[] = [];
-  doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const chunks: Uint8Array[] = [];
+  doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
 
   // ========== COVER PAGE ==========
   doc.rect(0, 0, doc.page.width, 80).fill("#111827");
@@ -504,11 +504,11 @@ export async function GET(
   // Finalize
   doc.end();
 
-  const pdfBuffer = await new Promise<Uint8Array>((resolve) => {
-    doc.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
+  const pdfBuffer = await new Promise<Buffer>((resolve) => {
+    doc.on("end", () => resolve(Buffer.concat(chunks as Buffer[])));
   });
 
-  return new Response(pdfBuffer, {
+  return new Response(pdfBuffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="Interview_Report_${candidateName.replace(/\s+/g, "_")}.pdf"`,
