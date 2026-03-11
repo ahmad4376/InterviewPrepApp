@@ -50,6 +50,9 @@ deepgram_agent_docs.md
 # clerk configuration (can include secrets)
 /.clerk/
 
+# Kubernetes secrets (real values)
+k8s/secrets.yaml
+
 # Large dataset files
 app/lib/new_dataset.json
 
