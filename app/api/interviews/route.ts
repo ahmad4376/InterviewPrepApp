@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
-import { generatePoolQuestions } from "app/lib/openai";
+import { generatePoolQuestions, generateHRQuestions } from "app/lib/openai";
 import { selectQuestions } from "app/lib/questionSelection";
 import { buildSamplingPlan } from "app/lib/sampling";
 import Interview from "app/models/Interview";
@@ -80,6 +80,15 @@ export async function POST(request: Request) {
     }
   }
 
+  // Validate interviewType
+  const VALID_INTERVIEW_TYPES = ["technical", "hr"] as const;
+  const rawInterviewType = (body as { interviewType?: string }).interviewType;
+  const interviewType: "technical" | "hr" =
+    typeof rawInterviewType === "string" &&
+    VALID_INTERVIEW_TYPES.includes(rawInterviewType as "technical" | "hr")
+      ? (rawInterviewType as "technical" | "hr")
+      : "technical";
+
   // Validate jobLevel
   const VALID_JOB_LEVELS = ["associate", "junior", "mid", "senior", "lead"];
   const rawJobLevel = (body as { jobLevel?: string }).jobLevel;
@@ -101,21 +110,28 @@ export async function POST(request: Request) {
     );
   }
 
-  // Fetch questions from DB (pool is larger than what we'll ask)
   let questionPool: IPoolQuestion[] = [];
-  try {
-    questionPool = await selectQuestions(title, description, poolSize);
-    console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
-  } catch (err) {
-    console.error("DB question selection failed, falling back to OpenAI:", err);
-  }
 
-  // If not enough relevant DB questions, discard them and use OpenAI generation
-  if (questionPool.length < MIN_DB_QUESTIONS) {
-    console.log(
-      `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
-    );
-    questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
+  if (interviewType === "hr") {
+    // HR interviews use LLM-generated HR screening questions
+    console.log("Generating HR screening questions via LLM");
+    questionPool = await generateHRQuestions(title, description, poolSize);
+  } else {
+    // Technical interviews: Fetch questions from DB (pool is larger than what we'll ask)
+    try {
+      questionPool = await selectQuestions(title, description, poolSize);
+      console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
+    } catch (err) {
+      console.error("DB question selection failed, falling back to OpenAI:", err);
+    }
+
+    // If not enough relevant DB questions, discard them and use OpenAI generation
+    if (questionPool.length < MIN_DB_QUESTIONS) {
+      console.log(
+        `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
+      );
+      questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
+    }
   }
 
   const totalQuestions = Math.min(numQuestions, questionPool.length);
@@ -140,6 +156,7 @@ export async function POST(request: Request) {
     company,
     description,
     jobLevel,
+    interviewType,
     questions: displayQuestions,
     status: "scheduled",
     // Candidate resume data
@@ -178,7 +195,7 @@ export async function GET(_request: Request) {
 
   const interviews = await Interview.find({ userId })
     .sort({ createdAt: -1 })
-    .select("title company status createdAt feedback isMassInterview shareToken")
+    .select("title company status createdAt feedback isMassInterview shareToken interviewType")
     .lean();
 
   const result = interviews.map((i) => ({
@@ -190,6 +207,7 @@ export async function GET(_request: Request) {
     hasFeedback: !!i.feedback,
     isMassInterview: !!i.isMassInterview,
     shareToken: i.shareToken ?? null,
+    interviewType: i.interviewType ?? "technical",
   }));
 
   return NextResponse.json(result);

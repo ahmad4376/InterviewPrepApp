@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ErrorBoundary from "../../components/ErrorBoundary";
 import ResumeUpload from "../../components/ResumeUpload";
-import { Loader2, Monitor, Server, Layers, BarChart3, Cloud, Briefcase, X } from "lucide-react";
+import {
+  Loader2,
+  Monitor,
+  Server,
+  Layers,
+  BarChart3,
+  Cloud,
+  Briefcase,
+  X,
+  Code,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ResumeData } from "app/lib/resumeParser";
 
@@ -74,6 +84,16 @@ function CreateInterviewForm() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
 
+  // Coding interview config
+  const [showCodingConfig, setShowCodingConfig] = useState(false);
+  const [codingTitle, setCodingTitle] = useState("Coding Practice");
+  const [codingDifficulty, setCodingDifficulty] = useState<"easy" | "medium" | "hard" | "mixed">(
+    "mixed",
+  );
+  const [codingNumProblems, setCodingNumProblems] = useState(5);
+  const [codingTimeLimit, setCodingTimeLimit] = useState<number | null>(60);
+  const [codingLoading, setCodingLoading] = useState(false);
+
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template.name);
     setTitle(template.title);
@@ -86,8 +106,7 @@ function CreateInterviewForm() {
     setDescription("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (interviewType: "technical" | "hr") => {
     setError("");
     setLoading(true);
 
@@ -103,6 +122,7 @@ function CreateInterviewForm() {
           jobLevel,
           isMassInterview,
           resumeData,
+          interviewType,
         }),
       });
 
@@ -119,6 +139,43 @@ function CreateInterviewForm() {
       toast.error(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCodingInterview = async () => {
+    if (!showCodingConfig) {
+      setShowCodingConfig(true);
+      return;
+    }
+
+    setCodingLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/coding-interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: codingTitle,
+          difficulty: codingDifficulty,
+          numProblems: codingNumProblems,
+          timeLimit: codingTimeLimit,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to create coding interview");
+      }
+
+      toast.success("Coding interview created");
+      router.push("/dashboard");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setCodingLoading(false);
     }
   };
 
@@ -178,7 +235,7 @@ function CreateInterviewForm() {
           Enter a job description and we&apos;ll generate tailored interview questions.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-5" noValidate>
           {/* Resume Upload Section */}
           <ResumeUpload onResumeData={setResumeData} disabled={loading} />
 
@@ -308,14 +365,26 @@ function CreateInterviewForm() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 size={18} className="animate-spin" />}
-            {loading ? "Generating Questions..." : "Create Interview"}
-          </button>
+          <div className="flex gap-3 w-full">
+            <button
+              type="button"
+              disabled={loading || !title || !company || !description}
+              onClick={() => handleSubmit("hr")}
+              className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading ? "Generating..." : "Create HR Screening Interview"}
+            </button>
+            <button
+              type="button"
+              disabled={loading || !title || !company || !description}
+              onClick={() => handleSubmit("technical")}
+              className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading ? "Generating..." : "Create Technical Interview"}
+            </button>
+          </div>
 
           {loading && (
             <p className="text-center text-xs text-gray-500 animate-pulse">
@@ -323,6 +392,143 @@ function CreateInterviewForm() {
             </p>
           )}
         </form>
+
+        {/* Divider */}
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-[#0f0f0f] px-4 text-gray-500">or</span>
+          </div>
+        </div>
+
+        {/* Coding Interview Section */}
+        {showCodingConfig && (
+          <div className="space-y-4 mb-4">
+            <div>
+              <label htmlFor="codingTitle" className="block text-sm font-medium text-gray-300 mb-1">
+                Session Title
+              </label>
+              <input
+                id="codingTitle"
+                type="text"
+                value={codingTitle}
+                onChange={(e) => setCodingTitle(e.target.value)}
+                placeholder="e.g. Frontend Coding Practice"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="codingDifficulty"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
+                  Difficulty
+                </label>
+                <select
+                  id="codingDifficulty"
+                  value={codingDifficulty}
+                  onChange={(e) =>
+                    setCodingDifficulty(e.target.value as "easy" | "medium" | "hard" | "mixed")
+                  }
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+                >
+                  <option value="easy" className="bg-gray-900">
+                    Easy
+                  </option>
+                  <option value="medium" className="bg-gray-900">
+                    Medium
+                  </option>
+                  <option value="hard" className="bg-gray-900">
+                    Hard
+                  </option>
+                  <option value="mixed" className="bg-gray-900">
+                    Mixed
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="codingNumProblems"
+                  className="block text-sm font-medium text-gray-300 mb-1"
+                >
+                  Problems
+                </label>
+                <select
+                  id="codingNumProblems"
+                  value={codingNumProblems}
+                  onChange={(e) => setCodingNumProblems(parseInt(e.target.value))}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+                >
+                  <option value={3} className="bg-gray-900">
+                    3 problems
+                  </option>
+                  <option value={5} className="bg-gray-900">
+                    5 problems
+                  </option>
+                  <option value={10} className="bg-gray-900">
+                    10 problems
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="codingTimeLimit"
+                className="block text-sm font-medium text-gray-300 mb-1"
+              >
+                Time Limit
+              </label>
+              <select
+                id="codingTimeLimit"
+                value={codingTimeLimit ?? "none"}
+                onChange={(e) =>
+                  setCodingTimeLimit(e.target.value === "none" ? null : parseInt(e.target.value))
+                }
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+              >
+                <option value={30} className="bg-gray-900">
+                  30 minutes
+                </option>
+                <option value={60} className="bg-gray-900">
+                  60 minutes
+                </option>
+                <option value={90} className="bg-gray-900">
+                  90 minutes
+                </option>
+                <option value="none" className="bg-gray-900">
+                  No limit
+                </option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={handleCodingInterview}
+          disabled={codingLoading || (showCodingConfig && !codingTitle)}
+          className="w-full rounded-lg border border-[#3ecf8e] bg-transparent px-4 py-3 font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/10 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {codingLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Creating...
+            </>
+          ) : (
+            <>
+              <Code size={20} />
+              {showCodingConfig ? "Create Coding Interview" : "Configure Coding Interview"}
+            </>
+          )}
+        </button>
+        <p className="text-center text-xs text-gray-500 mt-2">
+          Practice with LeetCode-style coding problems
+        </p>
       </div>
     </div>
   );

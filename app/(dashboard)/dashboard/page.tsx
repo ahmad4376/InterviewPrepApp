@@ -19,6 +19,8 @@ import {
   Pencil,
   Loader2,
   ChevronDown,
+  Code2,
+  Timer,
 } from "lucide-react";
 
 interface Interview {
@@ -32,7 +34,34 @@ interface Interview {
   shareToken?: string;
 }
 
-type StatusFilter = "all" | "scheduled" | "in-progress" | "completed";
+interface CodingInterviewItem {
+  _id: string;
+  title: string;
+  status: "scheduled" | "in-progress" | "completed";
+  difficulty: string;
+  numProblems: number;
+  timeLimit: number | null;
+  createdAt: string;
+}
+
+interface DashboardItem {
+  _id: string;
+  title: string;
+  status: "scheduled" | "in-progress" | "completed";
+  createdAt: string;
+  type: "voice" | "coding";
+  // Voice fields
+  company?: string;
+  hasFeedback?: boolean;
+  isMassInterview?: boolean;
+  shareToken?: string;
+  // Coding fields
+  difficulty?: string;
+  numProblems?: number;
+  timeLimit?: number | null;
+}
+
+type StatusFilter = "all" | "scheduled" | "in-progress" | "completed" | "coding";
 type SortBy = "newest" | "oldest" | "a-z" | "z-a";
 
 const statusConfig = {
@@ -46,6 +75,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "scheduled", label: "Scheduled" },
   { value: "in-progress", label: "In Progress" },
   { value: "completed", label: "Completed" },
+  { value: "coding", label: "Coding" },
 ];
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
@@ -77,7 +107,7 @@ function SkeletonCard() {
 }
 
 function DashboardContent() {
-  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -110,23 +140,49 @@ function DashboardContent() {
   };
 
   useEffect(() => {
-    fetch("/api/interviews")
-      .then((res) => res.json())
-      .then((data) => setInterviews(data))
+    Promise.all([
+      fetch("/api/interviews").then((r) => r.json()),
+      fetch("/api/coding-interviews").then((r) => r.json()),
+    ])
+      .then(([voiceData, codingData]) => {
+        const voiceItems: DashboardItem[] = (voiceData as Interview[]).map((i) => ({
+          _id: i._id,
+          title: i.title,
+          status: i.status,
+          createdAt: i.createdAt,
+          type: "voice" as const,
+          company: i.company,
+          hasFeedback: i.hasFeedback,
+          isMassInterview: i.isMassInterview,
+          shareToken: i.shareToken,
+        }));
+        const codingItems: DashboardItem[] = (codingData as CodingInterviewItem[]).map((c) => ({
+          _id: c._id,
+          title: c.title,
+          status: c.status,
+          createdAt: c.createdAt,
+          type: "coding" as const,
+          difficulty: c.difficulty,
+          numProblems: c.numProblems,
+          timeLimit: c.timeLimit,
+        }));
+        setItems([...voiceItems, ...codingItems]);
+      })
       .catch(() => {
-        setInterviews([]);
+        setItems([]);
         toast.error("Failed to load interviews");
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, type: "voice" | "coding") => {
     setDeletingId(id);
     setConfirmDeleteId(null);
+    const endpoint = type === "coding" ? `/api/coding-interviews/${id}` : `/api/interviews/${id}`;
     try {
-      const res = await fetch(`/api/interviews/${id}`, { method: "DELETE" });
+      const res = await fetch(endpoint, { method: "DELETE" });
       if (res.ok) {
-        setInterviews((prev) => prev.filter((i) => i._id !== id));
+        setItems((prev) => prev.filter((i) => i._id !== id));
         toast.success("Interview deleted");
       } else {
         toast.error("Failed to delete interview");
@@ -138,10 +194,10 @@ function DashboardContent() {
     }
   };
 
-  const handleEditClick = async (interview: Interview) => {
-    setLoadingEditId(interview._id);
+  const handleEditClick = async (item: DashboardItem) => {
+    setLoadingEditId(item._id);
     try {
-      const res = await fetch(`/api/interviews/${interview._id}`);
+      const res = await fetch(`/api/interviews/${item._id}`);
       if (!res.ok) {
         toast.error("Failed to load interview details");
         return;
@@ -166,7 +222,7 @@ function DashboardContent() {
     company: string;
     description: string;
   }) => {
-    setInterviews((prev) =>
+    setItems((prev) =>
       prev.map((i) =>
         i._id === updated._id ? { ...i, title: updated.title, company: updated.company } : i,
       ),
@@ -176,12 +232,16 @@ function DashboardContent() {
   };
 
   const filteredInterviews = useMemo(() => {
-    return interviews
-      .filter((i) => statusFilter === "all" || i.status === statusFilter)
+    return items
+      .filter((i) => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "coding") return i.type === "coding";
+        return i.status === statusFilter;
+      })
       .filter((i) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
-        return i.title.toLowerCase().includes(q) || i.company.toLowerCase().includes(q);
+        return i.title.toLowerCase().includes(q) || (i.company?.toLowerCase().includes(q) ?? false);
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -195,7 +255,7 @@ function DashboardContent() {
             return b.title.localeCompare(a.title);
         }
       });
-  }, [interviews, statusFilter, searchQuery, sortBy]);
+  }, [items, statusFilter, searchQuery, sortBy]);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -218,7 +278,7 @@ function DashboardContent() {
     );
   }
 
-  if (interviews.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur text-center">
@@ -324,24 +384,31 @@ function DashboardContent() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredInterviews.map((interview) => {
-            const status = statusConfig[interview.status];
-            const isConfirming = confirmDeleteId === interview._id;
-            const isDeleting = deletingId === interview._id;
-            const isLoadingEdit = loadingEditId === interview._id;
+          {filteredInterviews.map((item) => {
+            const status = statusConfig[item.status];
+            const isConfirming = confirmDeleteId === item._id;
+            const isDeleting = deletingId === item._id;
+            const isLoadingEdit = loadingEditId === item._id;
+            const isCoding = item.type === "coding";
 
             return (
-              <div key={interview._id}>
+              <div key={`${item.type}-${item._id}`}>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-white font-semibold truncate">{interview.title}</h3>
+                      <h3 className="text-white font-semibold truncate">{item.title}</h3>
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}
                       >
                         {status.label}
                       </span>
-                      {interview.isMassInterview && (
+                      {isCoding && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
+                          <Code2 size={12} />
+                          Coding
+                        </span>
+                      )}
+                      {item.isMassInterview && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
                           <Users size={12} />
                           Mass
@@ -349,26 +416,71 @@ function DashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span className="inline-flex items-center gap-1">
-                        <Building2 size={14} />
-                        {interview.company}
-                      </span>
+                      {isCoding ? (
+                        <>
+                          <span className="inline-flex items-center gap-1">
+                            <Code2 size={14} />
+                            {item.numProblems} problems · {item.difficulty}
+                          </span>
+                          {item.timeLimit && (
+                            <span className="inline-flex items-center gap-1">
+                              <Timer size={14} />
+                              {item.timeLimit} min
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Building2 size={14} />
+                          {item.company}
+                        </span>
+                      )}
                       <span className="inline-flex items-center gap-1">
                         <Calendar size={14} />
-                        {new Date(interview.createdAt).toLocaleDateString()}
+                        {new Date(item.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {interview.isMassInterview ? (
+                    {isCoding ? (
                       <>
-                        {interview.shareToken && (
+                        {item.status === "scheduled" && (
+                          <Link
+                            href={`/coding-session/${item._id}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
+                          >
+                            Start
+                            <ArrowRight size={14} />
+                          </Link>
+                        )}
+                        {item.status === "in-progress" && (
+                          <Link
+                            href={`/coding-session/${item._id}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
+                          >
+                            Resume
+                            <ArrowRight size={14} />
+                          </Link>
+                        )}
+                        {item.status === "completed" && (
+                          <Link
+                            href={`/coding-results/${item._id}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
+                          >
+                            View Results
+                            <ArrowRight size={14} />
+                          </Link>
+                        )}
+                      </>
+                    ) : item.isMassInterview ? (
+                      <>
+                        {item.shareToken && (
                           <button
-                            onClick={() => handleCopyLink(interview.shareToken!)}
+                            onClick={() => handleCopyLink(item.shareToken!)}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20"
                           >
-                            {copiedToken === interview.shareToken ? (
+                            {copiedToken === item.shareToken ? (
                               <>
                                 <Check size={14} className="text-green-400" />
                                 Copied!
@@ -382,7 +494,7 @@ function DashboardContent() {
                           </button>
                         )}
                         <Link
-                          href={`/interviews/${interview._id}/candidates`}
+                          href={`/interviews/${item._id}/candidates`}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-purple-500/20 px-3 py-2 text-sm font-medium text-purple-400 transition hover:bg-purple-500/30"
                         >
                           <Users size={14} />
@@ -391,41 +503,41 @@ function DashboardContent() {
                       </>
                     ) : (
                       <>
-                        {interview.status === "scheduled" && (
+                        {item.status === "scheduled" && (
                           <Link
-                            href={`/interview/${interview._id}`}
+                            href={`/interview/${item._id}`}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
                           >
                             Start
                             <ArrowRight size={14} />
                           </Link>
                         )}
-                        {interview.status === "in-progress" && (
+                        {item.status === "in-progress" && (
                           <Link
-                            href={`/interview/${interview._id}`}
+                            href={`/interview/${item._id}`}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
                           >
                             Resume
                             <ArrowRight size={14} />
                           </Link>
                         )}
-                        {interview.status === "completed" && interview.hasFeedback && (
+                        {item.status === "completed" && item.hasFeedback && (
                           <Link
-                            href={`/feedback/${interview._id}`}
+                            href={`/feedback/${item._id}`}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
                           >
                             View Feedback
                             <ArrowRight size={14} />
                           </Link>
                         )}
-                        {interview.status === "completed" && !interview.hasFeedback && (
+                        {item.status === "completed" && !item.hasFeedback && (
                           <span className="px-4 py-2 text-sm text-gray-500">Completed</span>
                         )}
                       </>
                     )}
-                    {interview.status === "scheduled" && (
+                    {!isCoding && item.status === "scheduled" && (
                       <button
-                        onClick={() => handleEditClick(interview)}
+                        onClick={() => handleEditClick(item)}
                         disabled={isLoadingEdit}
                         aria-label="Edit interview"
                         className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
@@ -438,7 +550,7 @@ function DashboardContent() {
                       </button>
                     )}
                     <button
-                      onClick={() => setConfirmDeleteId(isConfirming ? null : interview._id)}
+                      onClick={() => setConfirmDeleteId(isConfirming ? null : item._id)}
                       disabled={isDeleting}
                       aria-label="Delete interview"
                       className="rounded-lg p-2 text-gray-400 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
@@ -462,7 +574,7 @@ function DashboardContent() {
                         Cancel
                       </button>
                       <button
-                        onClick={() => handleDelete(interview._id)}
+                        onClick={() => handleDelete(item._id, item.type)}
                         disabled={isDeleting}
                         className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
                       >

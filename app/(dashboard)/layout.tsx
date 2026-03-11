@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { List, Plus, Menu, X } from "lucide-react";
+import { List, Plus, Menu, X, Code2 } from "lucide-react";
 import GlobalGradient from "../components/landing/GlobalGradient";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: List },
   { href: "/create-interview", label: "New Interview", icon: Plus },
+  { href: "/coding-interview", label: "Practice", icon: Code2 },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

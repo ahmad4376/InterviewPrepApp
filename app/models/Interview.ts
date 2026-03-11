@@ -33,6 +33,16 @@ export interface InterviewFeedback {
   }>;
   strengths: string[];
   improvements: string[];
+  // HR-specific feedback fields
+  hrEvaluation?: {
+    communication: number;
+    culturalFit: number;
+    confidence: number;
+    clarity: number;
+    overallSuitability: number;
+    recommendation: "hire" | "consider" | "reject";
+    structuredFeedback: string;
+  };
   // Legacy fields for backwards compatibility with old interviews
   categories?: Array<{
     name: string;
@@ -53,6 +63,7 @@ export interface IInterview extends Document {
   description: string;
   questions: IQuestion[];
   jobLevel: string | null;
+  interviewType: "technical" | "hr";
   status: "scheduled" | "in-progress" | "completed";
   // Candidate resume data (optional)
   resumeData: ResumeData | null;
@@ -93,6 +104,11 @@ const interviewSchema = new Schema<IInterview>(
       type: String,
       enum: ["associate", "junior", "mid", "senior", "lead"],
       default: null,
+    },
+    interviewType: {
+      type: String,
+      enum: ["technical", "hr"],
+      default: "technical",
     },
     questions: { type: [questionSchema], default: [] },
     status: {

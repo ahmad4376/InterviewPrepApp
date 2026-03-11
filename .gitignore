@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -44,3 +46,12 @@ next-env.d.ts
 .claude/
 claude.md
 deepgram_agent_docs.md
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# Large dataset files
+app/lib/new_dataset.json
+
+# LeetCode fetcher scripts & data
+scripts/leetcode-fetcher/
