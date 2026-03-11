@@ -6,6 +6,7 @@ import { selectQuestions } from "app/lib/questionSelection";
 import { buildSamplingPlan } from "app/lib/sampling";
 import Interview from "app/models/Interview";
 import type { IPoolQuestion } from "app/lib/types";
+import type { ResumeData } from "app/lib/resumeParser";
 
 const DEFAULT_QUESTIONS = 5;
 const MAX_QUESTIONS = 20;
@@ -47,6 +48,37 @@ export async function POST(request: Request) {
     description: string;
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
+
+  // Extract and validate optional resume data
+  const rawResumeData = (body as { resumeData?: unknown }).resumeData;
+  let resumeData: ResumeData | null = null;
+  if (rawResumeData && typeof rawResumeData === "object") {
+    const rd = rawResumeData as Record<string, unknown>;
+    if (
+      typeof rd.name === "string" &&
+      Array.isArray(rd.skills) &&
+      Array.isArray(rd.experience) &&
+      Array.isArray(rd.education) &&
+      Array.isArray(rd.projects) &&
+      Array.isArray(rd.certifications) &&
+      Array.isArray(rd.languages)
+    ) {
+      resumeData = {
+        name: rd.name,
+        email: typeof rd.email === "string" ? rd.email : undefined,
+        phone: typeof rd.phone === "string" ? rd.phone : undefined,
+        summary: typeof rd.summary === "string" ? rd.summary : undefined,
+        skills: rd.skills.filter((s): s is string => typeof s === "string").slice(0, 100),
+        experience: (rd.experience as unknown[]).slice(0, 50) as ResumeData["experience"],
+        education: (rd.education as unknown[]).slice(0, 30) as ResumeData["education"],
+        projects: (rd.projects as unknown[]).slice(0, 50) as ResumeData["projects"],
+        certifications: rd.certifications
+          .filter((s): s is string => typeof s === "string")
+          .slice(0, 50),
+        languages: rd.languages.filter((s): s is string => typeof s === "string").slice(0, 30),
+      };
+    }
+  }
 
   // Validate interviewType
   const VALID_INTERVIEW_TYPES = ["technical", "hr"] as const;
@@ -98,7 +130,7 @@ export async function POST(request: Request) {
       console.log(
         `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
       );
-      questionPool = await generatePoolQuestions(title, description, poolSize);
+      questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
     }
   }
 
@@ -127,6 +159,8 @@ export async function POST(request: Request) {
     interviewType,
     questions: displayQuestions,
     status: "scheduled",
+    // Candidate resume data
+    resumeData,
     // Adaptive state
     questionPool,
     samplingPlan,

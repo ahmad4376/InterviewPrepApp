@@ -39,6 +39,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# clerk
+.clerk/
+
 # claude
 .claude/
 claude.md
