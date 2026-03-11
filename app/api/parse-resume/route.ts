@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAuthUserId } from "app/lib/auth";
 import { parseResume } from "app/lib/resumeParser";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -9,6 +10,11 @@ const ACCEPTED_TYPES = [
 ];
 
 export async function POST(request: Request) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");

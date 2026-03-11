@@ -12,7 +12,7 @@ export interface GeneratedQuestion {
 
 let client: OpenAI | null = null;
 
-function getClient(): OpenAI {
+export function getClient(): OpenAI {
   if (!client) {
     client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }

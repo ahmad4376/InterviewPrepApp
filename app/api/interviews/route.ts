@@ -49,10 +49,36 @@ export async function POST(request: Request) {
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
 
-  // Extract optional resume data
+  // Extract and validate optional resume data
   const rawResumeData = (body as { resumeData?: unknown }).resumeData;
-  const resumeData: ResumeData | null =
-    rawResumeData && typeof rawResumeData === "object" ? (rawResumeData as ResumeData) : null;
+  let resumeData: ResumeData | null = null;
+  if (rawResumeData && typeof rawResumeData === "object") {
+    const rd = rawResumeData as Record<string, unknown>;
+    if (
+      typeof rd.name === "string" &&
+      Array.isArray(rd.skills) &&
+      Array.isArray(rd.experience) &&
+      Array.isArray(rd.education) &&
+      Array.isArray(rd.projects) &&
+      Array.isArray(rd.certifications) &&
+      Array.isArray(rd.languages)
+    ) {
+      resumeData = {
+        name: rd.name,
+        email: typeof rd.email === "string" ? rd.email : undefined,
+        phone: typeof rd.phone === "string" ? rd.phone : undefined,
+        summary: typeof rd.summary === "string" ? rd.summary : undefined,
+        skills: rd.skills.filter((s): s is string => typeof s === "string").slice(0, 100),
+        experience: (rd.experience as unknown[]).slice(0, 50) as ResumeData["experience"],
+        education: (rd.education as unknown[]).slice(0, 30) as ResumeData["education"],
+        projects: (rd.projects as unknown[]).slice(0, 50) as ResumeData["projects"],
+        certifications: rd.certifications
+          .filter((s): s is string => typeof s === "string")
+          .slice(0, 50),
+        languages: rd.languages.filter((s): s is string => typeof s === "string").slice(0, 30),
+      };
+    }
+  }
 
   // Validate jobLevel
   const VALID_JOB_LEVELS = ["associate", "junior", "mid", "senior", "lead"];

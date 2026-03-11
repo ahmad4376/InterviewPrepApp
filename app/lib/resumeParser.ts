@@ -1,9 +1,10 @@
-import OpenAI from "openai";
 import mammoth from "mammoth";
 
-// Parse PDF buffer using pdf-parse core lib (bypasses buggy test code in index.js)
-async function parsePDFBuffer(buffer: Buffer): Promise<string> {
-  // Import the core parser directly to avoid the test file loading bug
+/**
+ * Parse a PDF file buffer and extract text
+ */
+async function parsePDF(buffer: Buffer): Promise<string> {
+  // Import the core parser directly to avoid the test file loading bug in pdf-parse index.js
   // @ts-expect-error - pdf-parse doesn't export types for internal lib
   const pdfParse = (await import("pdf-parse/lib/pdf-parse")).default;
   const data = await pdfParse(buffer);
@@ -36,22 +37,6 @@ export interface ResumeData {
   languages: string[];
 }
 
-let openaiClient: OpenAI | null = null;
-
-function getOpenAI(): OpenAI {
-  if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return openaiClient;
-}
-
-/**
- * Parse a PDF file buffer and extract text
- */
-async function parsePDF(buffer: Buffer): Promise<string> {
-  return parsePDFBuffer(buffer);
-}
-
 /**
  * Parse a DOCX file buffer and extract text
  */
@@ -79,7 +64,8 @@ export async function extractTextFromResume(buffer: Buffer, mimeType: string): P
  * Uses OpenAI to parse raw resume text into structured data
  */
 export async function parseResumeWithAI(rawText: string): Promise<ResumeData> {
-  const openai = getOpenAI();
+  const { getClient } = await import("./openai");
+  const openai = getClient();
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -142,7 +128,12 @@ Rules:
     throw new Error("OpenAI returned an empty response for resume parsing");
   }
 
-  const parsed = JSON.parse(content) as ResumeData;
+  let parsed: ResumeData;
+  try {
+    parsed = JSON.parse(content) as ResumeData;
+  } catch {
+    throw new Error("Failed to parse AI response as valid JSON");
+  }
 
   // Validate and provide defaults
   return {
