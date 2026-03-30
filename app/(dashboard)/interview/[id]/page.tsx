@@ -54,6 +54,7 @@ export default async function InterviewSessionPage({
   // Get interview type, default to 'technical' for backwards compatibility
   const interviewType = (interview.interviewType as "technical" | "hr") || "technical";
 
+  console.log("questions are: ", questions);
   return (
     <InterviewSession
       interviewId={id}

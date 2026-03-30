@@ -84,8 +84,10 @@ function CreateInterviewForm() {
   const [error, setError] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
-  const { isBusiness, loading: accountLoading } = useAccountType();
-  
+  // const { isBusiness, loading: accountLoading } = useAccountType();
+  // console.log("isBusiness:", isBusiness);
+  const isBusiness = true; // TEMPORARY
+
   // Coding interview config
   const [showCodingConfig, setShowCodingConfig] = useState(false);
   const [codingTitle, setCodingTitle] = useState("Coding Practice");
@@ -95,6 +97,11 @@ function CreateInterviewForm() {
   const [codingLoading, setCodingLoading] = useState(false);
   const [codingIsMassInterview, setCodingIsMassInterview] = useState(false);
   const [codingIsCustomMass, setCodingIsCustomMass] = useState(false);
+
+  const [isCustomInterview, setIsCustomInterview]     = useState(false);
+  const [showCustomNumModal, setShowCustomNumModal]   = useState(false);
+  const [customNumQuestions, setCustomNumQuestions]   = useState(5);
+  const [pendingInterviewType, setPendingInterviewType] = useState<"hr" | "technical">("technical");
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template.name);
@@ -354,28 +361,58 @@ function CreateInterviewForm() {
 
           {/* Mass Interview Toggle — business accounts only */}
           {isBusiness && (
-            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-gray-300">Mass Interview</p>
-                <p className="text-xs text-gray-500">
-                  Allow multiple candidates to take this interview via a shareable link
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isMassInterview}
-                onClick={() => setIsMassInterview(!isMassInterview)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                  isMassInterview ? "bg-[#3ecf8e]" : "bg-white/20"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                    isMassInterview ? "translate-x-5" : "translate-x-0"
+            <div className="space-y-3">
+              {/* Default Mass Toggle */}
+              <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-opacity ${
+                isCustomInterview ? "border-white/5 bg-white/5 opacity-40" : "border-white/10 bg-white/5"
+              }`}>
+                <div>
+                  <p className="text-sm font-medium text-gray-300">Default Mass Interview</p>
+                  <p className="text-xs text-gray-500">
+                    Allow multiple candidates via a shareable link
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isMassInterview}
+                  disabled={isCustomInterview}
+                  onClick={() => setIsMassInterview(!isMassInterview)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:cursor-not-allowed ${
+                    isMassInterview ? "bg-[#3ecf8e]" : "bg-white/20"
                   }`}
-                />
-              </button>
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    isMassInterview ? "translate-x-5" : "translate-x-0"
+                  }`} />
+                </button>
+              </div>
+
+              {/* Custom Interview Toggle */}
+              <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-opacity ${
+                isMassInterview ? "border-white/5 bg-white/5 opacity-40" : "border-white/10 bg-white/5"
+              }`}>
+                <div>
+                  <p className="text-sm font-medium text-gray-300">Custom Interview</p>
+                  <p className="text-xs text-gray-500">
+                    Provide your own questions and sample answers
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isCustomInterview}
+                  disabled={isMassInterview}
+                  onClick={() => setIsCustomInterview(!isCustomInterview)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:cursor-not-allowed ${
+                    isCustomInterview ? "bg-[#3ecf8e]" : "bg-white/20"
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    isCustomInterview ? "translate-x-5" : "translate-x-0"
+                  }`} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -389,7 +426,14 @@ function CreateInterviewForm() {
             <button
               type="button"
               disabled={loading || !title || !company || !description}
-              onClick={() => handleSubmit("hr")}
+              onClick={() => {
+                if (isCustomInterview) {
+                  setPendingInterviewType("hr");
+                  setShowCustomNumModal(true);
+                } else {
+                  handleSubmit("hr");
+                }
+              }}
               className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
@@ -398,7 +442,14 @@ function CreateInterviewForm() {
             <button
               type="button"
               disabled={loading || !title || !company || !description}
-              onClick={() => handleSubmit("technical")}
+              onClick={() => {
+                if (isCustomInterview) {
+                  setPendingInterviewType("technical");
+                  setShowCustomNumModal(true);
+                } else {
+                  handleSubmit("technical");
+                }
+              }}
               className="flex-1 rounded-lg bg-[#3ecf8e] px-4 py-2.5 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
@@ -597,6 +648,56 @@ function CreateInterviewForm() {
           Practice with LeetCode-style coding problems
         </p>
       </div>
+      {/* Custom Interview — Number of Questions Modal */}
+      {showCustomNumModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-1">Custom Interview</h2>
+            <p className="text-sm text-gray-400 mb-6">
+              How many questions do you want to add?
+            </p>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={customNumQuestions}
+              onChange={(e) =>
+                setCustomNumQuestions(Math.max(1, Math.min(20, Number(e.target.value) || 1)))
+              }
+              className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e] mb-6"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCustomNumModal(false)}
+                className="flex-1 rounded-lg bg-white/10 py-2.5 text-sm font-medium text-white hover:bg-white/20 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowCustomNumModal(false);
+                  sessionStorage.setItem(
+                    "customInterviewConfig",
+                    JSON.stringify({
+                      title,
+                      company,
+                      description,
+                      jobLevel,
+                      numQuestions: customNumQuestions,
+                      interviewType: pendingInterviewType,
+                      isMassInterview,
+                    }),
+                  );
+                  router.push("/create-interview/custom-questions");
+                }}
+                className="flex-1 rounded-lg bg-[#3ecf8e] py-2.5 text-sm font-semibold text-black hover:bg-[#36be81] transition"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

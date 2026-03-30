@@ -48,6 +48,18 @@ export async function POST(request: Request) {
     description: string;
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
+  const isCustomInterview = !!(body as { isCustomInterview?: boolean }).isCustomInterview;
+  const rawCustomQuestions = (body as { customQuestions?: unknown }).customQuestions;
+  const customQuestions: { question: string; sampleAnswer: string; rubric: string[] }[] =
+    Array.isArray(rawCustomQuestions)
+      ? (rawCustomQuestions as { question: string; sampleAnswer: string; rubric?: string[] }[])
+          .filter((q) => typeof q.question === "string" && q.question.trim())
+          .map((q) => ({
+            question:     q.question,
+            sampleAnswer: q.sampleAnswer ?? "",
+            rubric:       Array.isArray(q.rubric) ? q.rubric : [],
+          }))
+      : [];
 
   // Extract and validate optional resume data
   const rawResumeData = (body as { resumeData?: unknown }).resumeData;
@@ -111,42 +123,70 @@ export async function POST(request: Request) {
   }
 
   let questionPool: IPoolQuestion[] = [];
+  let totalQuestions: number;
+  let samplingPlan: number[];
+  let displayQuestions: { text: string; topic: string }[];
 
-  if (interviewType === "hr") {
-    // HR interviews use LLM-generated HR screening questions
-    console.log("Generating HR screening questions via LLM");
-    questionPool = await generateHRQuestions(title, description, poolSize);
-  } else {
-    // Technical interviews: Fetch questions from DB (pool is larger than what we'll ask)
-    try {
-      questionPool = await selectQuestions(title, description, poolSize);
-      console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
-    } catch (err) {
-      console.error("DB question selection failed, falling back to OpenAI:", err);
+  if (isCustomInterview && customQuestions.length > 0) {
+    // Custom questions — bypass all LLM/DB question generation and adaptive sampling
+    questionPool = customQuestions.map((q, i) => {
+      const rubricText = q.rubric.length > 0
+        ? `\n\nRubric:\n${q.rubric.map((p) => `• ${p}`).join("\n")}`
+        : "";
+      const expectedAnswer = `${q.sampleAnswer}${rubricText}`.trim();
+
+      return {
+        question_id:      `custom-${i}`,
+        question_title:   `Question ${i + 1}`,
+        question_text:    q.question,
+        expected_answer:  expectedAnswer,
+        answer_text:      expectedAnswer,
+        difficulty_score: 50,
+        tags:             ["custom"],
+        difficulty:       "medium" as const,
+        source:           "custom" as const,
+        company_tags:     [],
+        acceptance_rate:  null,
+        frequency:        null,
+      };
+    });
+
+    totalQuestions = questionPool.length;
+    // Flat sequential plan — no adaptive difficulty changes
+    samplingPlan   = questionPool.map((_, i) => i);
+    displayQuestions = questionPool.map((q) => ({
+      text:  q.question_text,
+      topic: "Custom",
+    }));
+  } 
+  else {
+    // Existing logic unchanged
+    if (interviewType === "hr") {
+      console.log("Generating HR screening questions via LLM");
+      questionPool = await generateHRQuestions(title, description, poolSize);
+    } else {
+      try {
+        questionPool = await selectQuestions(title, description, poolSize);
+        console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
+      } catch (err) {
+        console.error("DB question selection failed, falling back to OpenAI:", err);
+      }
+      if (questionPool.length < MIN_DB_QUESTIONS) {
+        console.log(`Only ${questionPool.length} DB questions found, using OpenAI generation`);
+        questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
+      }
     }
 
-    // If not enough relevant DB questions, discard them and use OpenAI generation
-    if (questionPool.length < MIN_DB_QUESTIONS) {
-      console.log(
-        `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
-      );
-      questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
-    }
+    totalQuestions = Math.min(numQuestions, questionPool.length);
+    samplingPlan   = buildSamplingPlan(
+      totalQuestions,
+      jobLevel as "associate" | "junior" | "mid" | "senior" | "lead",
+    );
+    displayQuestions = questionPool.slice(0, totalQuestions).map((q) => ({
+      text:  q.question_text,
+      topic: q.tags[0] || q.question_title || "General",
+    }));
   }
-
-  const totalQuestions = Math.min(numQuestions, questionPool.length);
-
-  // Build sampling plan using job level
-  const samplingPlan = buildSamplingPlan(
-    totalQuestions,
-    jobLevel as "associate" | "junior" | "mid" | "senior" | "lead",
-  );
-
-  // Build display questions (simplified) from the pool
-  const displayQuestions = questionPool.slice(0, totalQuestions).map((q) => ({
-    text: q.question_text,
-    topic: q.tags[0] || q.question_title || "General",
-  }));
 
   await connectDB();
 
@@ -159,19 +199,17 @@ export async function POST(request: Request) {
     interviewType,
     questions: displayQuestions,
     status: "scheduled",
-    // Candidate resume data
     resumeData,
-    // Adaptive state
     questionPool,
     samplingPlan,
-    currentQuestionId: null,
-    currentQuestionText: "",
-    currentExpectedAnswer: "",
-    questionsAsked: 0,
+    currentQuestionId:      null,
+    currentQuestionText:    "",
+    currentExpectedAnswer:  "",
+    questionsAsked:         0,
     totalQuestions,
-    currentPlanIndex: 0,
-    // Mass interview
+    currentPlanIndex:       0,
     isMassInterview,
+    isCustomInterview,
     ...(isMassInterview ? { shareToken: crypto.randomUUID() } : {}),
   });
 

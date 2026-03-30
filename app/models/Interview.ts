@@ -81,6 +81,7 @@ export interface IInterview extends Document {
   feedback: InterviewFeedback | null;
   // Mass interview
   isMassInterview: boolean;
+  isCustomInterview: boolean;
   shareToken: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -132,6 +133,7 @@ const interviewSchema = new Schema<IInterview>(
     feedback: { type: Schema.Types.Mixed, default: null },
     // Mass interview
     isMassInterview: { type: Boolean, default: false },
+    isCustomInterview: { type: Boolean, default: false },
     shareToken: { type: String },
   },
   { timestamps: true },
