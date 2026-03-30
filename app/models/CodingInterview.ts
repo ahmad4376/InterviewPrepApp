@@ -14,7 +14,7 @@ export interface ISubmissionEntry {
 export interface ICodingInterview extends Document {
   userId: string;
   title: string;
-  difficulty: "easy" | "medium" | "hard" | "mixed";
+  difficulty: number;
   numProblems: number;
   timeLimit: number | null;
   tags: string[];
@@ -53,9 +53,9 @@ const CodingInterviewSchema = new Schema<ICodingInterview>(
     userId: { type: String, required: true },
     title: { type: String, required: true },
     difficulty: {
-      type: String,
-      enum: ["easy", "medium", "hard", "mixed"],
-      default: "mixed",
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 3,
     },
     numProblems: { type: Number, required: true },
     timeLimit: { type: Number, default: null },

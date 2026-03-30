@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No problems found matching criteria" }, { status: 400 });
     }
 
+    console.log("difficulty type: ", typeof difficulty);
+    console.log("difficulty: ",difficulty);
     const interview = await CodingInterview.create({
       userId,
       title,
