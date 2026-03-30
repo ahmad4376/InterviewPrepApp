@@ -21,6 +21,9 @@ export interface ICodingInterview extends Document {
   status: "scheduled" | "in-progress" | "completed";
   problems: string[];
   submissions: ISubmissionEntry[];
+  isMassInterview: boolean;
+  isCustomMass: boolean;
+  shareToken: string | null;
   startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
@@ -66,6 +69,9 @@ const CodingInterviewSchema = new Schema<ICodingInterview>(
     submissions: { type: [SubmissionEntrySchema], default: [] },
     startedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
+    isMassInterview: { type: Boolean, default: false },
+    isCustomMass: { type: Boolean, default: false },
+    shareToken: { type: String, default: null },
   },
   { timestamps: true },
 );

@@ -37,11 +37,17 @@ export default function Header() {
               </button>
             </SignInButton>
 
-            <SignUpButton mode="modal">
+            {/* <SignUpButton mode="modal">
               <button className="inline-flex items-center rounded-md border border-white/15 bg-[#3ecf8e] px-3 py-1.5 text-sm font-semibold text-black hover:bg-[#36be81]">
                 Sign up
               </button>
-            </SignUpButton>
+            </SignUpButton> */}
+            <Link
+              href="/sign-up"
+              className="inline-flex items-center rounded-md border border-white/15 bg-[#3ecf8e] px-3 py-1.5 text-sm font-semibold text-black hover:bg-[#36be81]"
+            >
+              Sign up
+            </Link>
           </SignedOut>
         </div>
       </div>

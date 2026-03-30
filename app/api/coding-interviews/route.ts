@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { title, difficulty = "mixed", numProblems = 5, timeLimit = null, tags = [] } = body;
+    // const { title, difficulty = "mixed", numProblems = 5, timeLimit = null, tags = [] } = body;
+    const { title, difficulty = 3, numProblems = 5, timeLimit = null, tags = [], isMassInterview = false, isCustomMass = false, customProblemIds = [] } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -52,42 +53,44 @@ export async function POST(request: NextRequest) {
 
     let problemIds: string[] = [];
 
-    if (difficulty === "mixed") {
-      // Mixed: roughly 40% easy, 40% medium, 20% hard
-      const easyCount = Math.ceil(numProblems * 0.4);
-      const mediumCount = Math.ceil(numProblems * 0.4);
-      const hardCount = numProblems - easyCount - mediumCount;
+    if (isCustomMass && Array.isArray(customProblemIds) && customProblemIds.length > 0) {
+      // Custom mass interview — use exactly the problems the user selected
+      problemIds = customProblemIds.slice(0, numProblems);
+    } else {
+      // Numeric difficulty distribution
+      const distributions: Record<number, { easy: number; medium: number; hard: number }> = {
+        1: { easy: 1.0,  medium: 0.0,  hard: 0.0 },
+        2: { easy: 0.7,  medium: 0.3,  hard: 0.0 },
+        3: { easy: 0.5,  medium: 0.5,  hard: 0.0 },
+        4: { easy: 0.2,  medium: 0.6,  hard: 0.2 },
+        5: { easy: 0.0,  medium: 0.6,  hard: 0.4 },
+      };
+
+      const dist = distributions[Number(difficulty)] ? distributions[Number(difficulty)] : distributions[3];
+      const easyCount  = Math.round(numProblems * (dist ? dist.easy : 0));
+      const hardCount  = Math.round(numProblems * (dist ? dist.hard : 0));
+      const mediumCount = numProblems - easyCount - hardCount;
+
+      const filter: Record<string, unknown> = {};
+      if (tags.length > 0) filter.tags = { $in: tags };
+
+      const fetchBucket = async (bucket: string, count: number) => {
+        if (count <= 0) return [];
+        const results = await Problem.aggregate([
+          { $match: { ...filter, difficulty_bucket: bucket } },
+          { $sample: { size: count } },
+          { $project: { id: 1 } },
+        ]);
+        return results.map((p: { id: string }) => p.id);
+      };
 
       const [easy, medium, hard] = await Promise.all([
-        Problem.aggregate([
-          { $match: { ...filter, difficulty_bucket: "easy" } },
-          { $sample: { size: easyCount } },
-          { $project: { id: 1 } },
-        ]),
-        Problem.aggregate([
-          { $match: { ...filter, difficulty_bucket: "medium" } },
-          { $sample: { size: mediumCount } },
-          { $project: { id: 1 } },
-        ]),
-        Problem.aggregate([
-          { $match: { ...filter, difficulty_bucket: "hard" } },
-          { $sample: { size: Math.max(hardCount, 1) } },
-          { $project: { id: 1 } },
-        ]),
+        fetchBucket("easy",   easyCount),
+        fetchBucket("medium", mediumCount),
+        fetchBucket("hard",   hardCount),
       ]);
 
-      problemIds = [
-        ...easy.map((p: { id: string }) => p.id),
-        ...medium.map((p: { id: string }) => p.id),
-        ...hard.map((p: { id: string }) => p.id),
-      ].slice(0, numProblems);
-    } else {
-      const problems = await Problem.aggregate([
-        { $match: { ...filter, difficulty_bucket: difficulty } },
-        { $sample: { size: numProblems } },
-        { $project: { id: 1 } },
-      ]);
-      problemIds = problems.map((p: { id: string }) => p.id);
+      problemIds = [...easy, ...medium, ...hard].slice(0, numProblems);
     }
 
     if (problemIds.length === 0) {
@@ -103,6 +106,9 @@ export async function POST(request: NextRequest) {
       tags,
       status: "scheduled",
       problems: problemIds,
+      isMassInterview: !!(isMassInterview || isCustomMass),
+      isCustomMass: !!isCustomMass,
+      ...(isMassInterview || isCustomMass ? { shareToken: crypto.randomUUID() } : {}),
       submissions: problemIds.map((pid) => ({
         problemId: pid,
         language: "javascript",

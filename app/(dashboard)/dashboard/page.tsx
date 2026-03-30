@@ -42,6 +42,8 @@ interface CodingInterviewItem {
   numProblems: number;
   timeLimit: number | null;
   createdAt: string;
+  isMassInterview?: boolean;
+  shareToken?: string;
 }
 
 interface DashboardItem {
@@ -165,6 +167,8 @@ function DashboardContent() {
           difficulty: c.difficulty,
           numProblems: c.numProblems,
           timeLimit: c.timeLimit,
+          isMassInterview: c.isMassInterview,
+          shareToken: c.shareToken,
         }));
         setItems([...voiceItems, ...codingItems]);
       })
@@ -445,32 +449,64 @@ function DashboardContent() {
                   <div className="flex items-center gap-2 shrink-0">
                     {isCoding ? (
                       <>
-                        {item.status === "scheduled" && (
-                          <Link
-                            href={`/coding-session/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-                          >
-                            Start
-                            <ArrowRight size={14} />
-                          </Link>
-                        )}
-                        {item.status === "in-progress" && (
-                          <Link
-                            href={`/coding-session/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
-                          >
-                            Resume
-                            <ArrowRight size={14} />
-                          </Link>
-                        )}
-                        {item.status === "completed" && (
-                          <Link
-                            href={`/coding-results/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
-                          >
-                            View Results
-                            <ArrowRight size={14} />
-                          </Link>
+                        {item.isMassInterview ? (
+                          <>
+                            {item.shareToken && (
+                              <button
+                                onClick={() => handleCopyLink(item.shareToken!)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+                              >
+                                {copiedToken === item.shareToken ? (
+                                  <>
+                                    <Check size={14} className="text-green-400" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={14} />
+                                    Copy Link
+                                  </>
+                                )}
+                              </button>
+                            )}
+                            <Link
+                              href={`/coding-interviews/${item._id}/candidates`}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-purple-500/20 px-3 py-2 text-sm font-medium text-purple-400 transition hover:bg-purple-500/30"
+                            >
+                              <Users size={14} />
+                              Candidates
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            {item.status === "scheduled" && (
+                              <Link
+                                href={`/coding-session/${item._id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
+                              >
+                                Start
+                                <ArrowRight size={14} />
+                              </Link>
+                            )}
+                            {item.status === "in-progress" && (
+                              <Link
+                                href={`/coding-session/${item._id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
+                              >
+                                Resume
+                                <ArrowRight size={14} />
+                              </Link>
+                            )}
+                            {item.status === "completed" && (
+                              <Link
+                                href={`/coding-results/${item._id}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
+                              >
+                                View Results
+                                <ArrowRight size={14} />
+                              </Link>
+                            )}
+                          </>
                         )}
                       </>
                     ) : item.isMassInterview ? (

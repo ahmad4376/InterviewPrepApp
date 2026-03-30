@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAccountType } from "../../hooks/useAccountType";
 import ErrorBoundary from "../../components/ErrorBoundary";
 import ResumeUpload from "../../components/ResumeUpload";
 import {
@@ -83,16 +84,17 @@ function CreateInterviewForm() {
   const [error, setError] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
-
+  const { isBusiness, loading: accountLoading } = useAccountType();
+  
   // Coding interview config
   const [showCodingConfig, setShowCodingConfig] = useState(false);
   const [codingTitle, setCodingTitle] = useState("Coding Practice");
-  const [codingDifficulty, setCodingDifficulty] = useState<"easy" | "medium" | "hard" | "mixed">(
-    "mixed",
-  );
+  const [codingDifficulty, setCodingDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [codingNumProblems, setCodingNumProblems] = useState(5);
   const [codingTimeLimit, setCodingTimeLimit] = useState<number | null>(60);
   const [codingLoading, setCodingLoading] = useState(false);
+  const [codingIsMassInterview, setCodingIsMassInterview] = useState(false);
+  const [codingIsCustomMass, setCodingIsCustomMass] = useState(false);
 
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template.name);
@@ -148,6 +150,20 @@ function CreateInterviewForm() {
       return;
     }
 
+    // Custom mass — navigate to question picker instead
+    if (codingIsCustomMass) {
+      setCodingLoading(true);
+      // Store config in sessionStorage for the picker page to read
+      sessionStorage.setItem("customMassConfig", JSON.stringify({
+        title: codingTitle,
+        difficulty: codingDifficulty,
+        numProblems: codingNumProblems,
+        timeLimit: codingTimeLimit,
+      }));
+      router.push("/create-interview/pick-questions");
+      return;
+    }
+
     setCodingLoading(true);
     setError("");
 
@@ -160,6 +176,8 @@ function CreateInterviewForm() {
           difficulty: codingDifficulty,
           numProblems: codingNumProblems,
           timeLimit: codingTimeLimit,
+          isMassInterview: codingIsMassInterview,
+          isCustomMass: false,
         }),
       });
 
@@ -334,30 +352,32 @@ function CreateInterviewForm() {
             </p>
           </div>
 
-          {/* Mass Interview Toggle */}
-          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Mass Interview</p>
-              <p className="text-xs text-gray-500">
-                Allow multiple candidates to take this interview via a shareable link
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isMassInterview}
-              onClick={() => setIsMassInterview(!isMassInterview)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                isMassInterview ? "bg-[#3ecf8e]" : "bg-white/20"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                  isMassInterview ? "translate-x-5" : "translate-x-0"
+          {/* Mass Interview Toggle — business accounts only */}
+          {isBusiness && (
+            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-gray-300">Mass Interview</p>
+                <p className="text-xs text-gray-500">
+                  Allow multiple candidates to take this interview via a shareable link
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isMassInterview}
+                onClick={() => setIsMassInterview(!isMassInterview)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                  isMassInterview ? "bg-[#3ecf8e]" : "bg-white/20"
                 }`}
-              />
-            </button>
-          </div>
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    isMassInterview ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3">
@@ -422,33 +442,27 @@ function CreateInterviewForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label
-                  htmlFor="codingDifficulty"
-                  className="block text-sm font-medium text-gray-300 mb-1"
-                >
+                <label htmlFor="codingDifficulty" className="block text-sm font-medium text-gray-300 mb-1">
                   Difficulty
                 </label>
                 <select
                   id="codingDifficulty"
                   value={codingDifficulty}
-                  onChange={(e) =>
-                    setCodingDifficulty(e.target.value as "easy" | "medium" | "hard" | "mixed")
-                  }
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+                  onChange={(e) => setCodingDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)}
+                  disabled={codingIsCustomMass}
+                  className={`w-full rounded-lg border border-white/10 px-4 py-2.5 text-white focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e] transition-opacity ${
+                    codingIsCustomMass ? "bg-white/5 opacity-30 cursor-not-allowed" : "bg-white/5"
+                  }`}
                 >
-                  <option value="easy" className="bg-gray-900">
-                    Easy
-                  </option>
-                  <option value="medium" className="bg-gray-900">
-                    Medium
-                  </option>
-                  <option value="hard" className="bg-gray-900">
-                    Hard
-                  </option>
-                  <option value="mixed" className="bg-gray-900">
-                    Mixed
-                  </option>
+                  <option value={1} className="bg-gray-900">1 — All Easy</option>
+                  <option value={2} className="bg-gray-900">2 — Mostly Easy</option>
+                  <option value={3} className="bg-gray-900">3 — Balanced</option>
+                  <option value={4} className="bg-gray-900">4 — Mostly Medium</option>
+                  <option value={5} className="bg-gray-900">5 — Hard Focus</option>
                 </select>
+                {codingIsCustomMass && (
+                  <p className="text-xs text-gray-600 mt-1">Difficulty is set by your question selection</p>
+                )}
               </div>
 
               <div>
@@ -506,6 +520,58 @@ function CreateInterviewForm() {
                 </option>
               </select>
             </div>
+            {/* Mass Interview Toggle for Coding — business only */}
+            {isBusiness && (
+              <div className="space-y-3">
+                {/* Default Mass Toggle */}
+                <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-opacity ${
+                  codingIsCustomMass ? "border-white/5 bg-white/5 opacity-40" : "border-white/10 bg-white/5"
+                }`}>
+                  <div>
+                    <p className="text-sm font-medium text-gray-300">Default Mass Interview</p>
+                    <p className="text-xs text-gray-500">Questions selected randomly based on difficulty</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={codingIsMassInterview}
+                    disabled={codingIsCustomMass}
+                    onClick={() => setCodingIsMassInterview(!codingIsMassInterview)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:cursor-not-allowed ${
+                      codingIsMassInterview ? "bg-[#3ecf8e]" : "bg-white/20"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      codingIsMassInterview ? "translate-x-5" : "translate-x-0"
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Custom Mass Toggle */}
+                <div className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-opacity ${
+                  codingIsMassInterview ? "border-white/5 bg-white/5 opacity-40" : "border-white/10 bg-white/5"
+                }`}>
+                  <div>
+                    <p className="text-sm font-medium text-gray-300">Custom Mass Interview</p>
+                    <p className="text-xs text-gray-500">Manually pick exactly which questions to include</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={codingIsCustomMass}
+                    disabled={codingIsMassInterview}
+                    onClick={() => setCodingIsCustomMass(!codingIsCustomMass)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:cursor-not-allowed ${
+                      codingIsCustomMass ? "bg-[#3ecf8e]" : "bg-white/20"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      codingIsCustomMass ? "translate-x-5" : "translate-x-0"
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -515,15 +581,16 @@ function CreateInterviewForm() {
           className="w-full rounded-lg border border-[#3ecf8e] bg-transparent px-4 py-3 font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/10 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {codingLoading ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              Creating...
-            </>
+            <><Loader2 size={18} className="animate-spin" />
+            {codingIsCustomMass ? "Loading..." : "Creating..."}</>
           ) : (
-            <>
-              <Code size={20} />
-              {showCodingConfig ? "Create Coding Interview" : "Configure Coding Interview"}
-            </>
+            <><Code size={20} />
+            {!showCodingConfig
+              ? "Configure Coding Interview"
+              : codingIsCustomMass
+              ? "Select Questions →"
+              : "Create Coding Interview"
+            }</>
           )}
         </button>
         <p className="text-center text-xs text-gray-500 mt-2">
