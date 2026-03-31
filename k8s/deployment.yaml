@@ -22,6 +22,10 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
       containers:
         - name: interview-prep
           image: ghcr.io/IMAGE_PLACEHOLDER:TAG_PLACEHOLDER
@@ -31,10 +35,10 @@ spec:
           resources:
             requests:
               cpu: 250m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: "1"
-              memory: 512Mi
+              memory: 1Gi
           livenessProbe:
             httpGet:
               path: /api/health
