@@ -80,3 +80,15 @@ spec:
                 secretKeyRef:
                   name: interview-prep-secrets
                   key: STRIPE_WEBHOOK_SECRET
+            - name: STRIPE_PRICE_PRO_MONTHLY
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: STRIPE_PRICE_PRO_MONTHLY
+            - name: STRIPE_PRICE_BUSINESS_MONTHLY
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: STRIPE_PRICE_BUSINESS_MONTHLY
+            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+              value: pk_test_51TGfwjAhtxv7VVNZtg7VD3sy3YnNYZeaYBO5aMRFWcvqdXRb7EgKWj3xWQlrjnqMUE2E4ynPM0TR0SWC7vAX2okQ00djX1tlio
