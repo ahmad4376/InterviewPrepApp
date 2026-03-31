@@ -59,8 +59,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/interviewprepapp:latest
+            ghcr.io/${{ github.repository_owner }}/interviewprepapp:${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_c3BlY2lhbC1saW9uZmlzaC03NC5jbGVyay5hY2NvdW50cy5kZXYk
           cache-from: type=gha
@@ -98,7 +98,7 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/interviewprepapp:${{ github.sha }}"
           sed -i "s|ghcr.io/IMAGE_PLACEHOLDER:TAG_PLACEHOLDER|${IMAGE}|g" k8s/deployment.yaml
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/service.yaml
