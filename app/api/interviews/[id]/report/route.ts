@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
+import { checkFeature, incrementUsage } from "app/lib/subscription/gate";
 import Interview from "app/models/Interview";
 import type { InterviewFeedback } from "app/models/Interview";
 import PDFDocument from "pdfkit";
@@ -328,6 +329,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  // PDF reports require Pro or Business tier
+  const canExport = await checkFeature(userId, "pdfReports");
+  if (!canExport) {
+    return new Response(
+      JSON.stringify({
+        error: "PDF reports require a Pro or Business plan",
+        upgrade: true,
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  await incrementUsage(userId, "pdfReports");
 
   const { id } = await params;
 

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import type { Problem } from "../_lib/types";
 import CodingWorkspace from "../_components/CodingWorkspace";
+import MobileGate from "app/components/MobileGate";
 
 export default function ProblemPage() {
   const params = useParams();
@@ -46,5 +47,9 @@ export default function ProblemPage() {
     );
   }
 
-  return <CodingWorkspace problems={[problem]} />;
+  return (
+    <MobileGate>
+      <CodingWorkspace problems={[problem]} />
+    </MobileGate>
+  );
 }

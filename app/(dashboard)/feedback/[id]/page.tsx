@@ -4,10 +4,14 @@ import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
 import type { InterviewFeedback } from "app/models/Interview";
-import { ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import ErrorBoundary from "../../../components/ErrorBoundary";
+import DownloadReportButton from "../../../components/DownloadReportButton";
 import FeedbackPageTabs from "../../../components/FeedbackPageTabs";
 import type { TranscriptEntry } from "app/models/Interview";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { PageHeader } from "@/app/components/ui/page-header";
 
 export default async function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,29 +28,29 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
     return (
       <ErrorBoundary>
         <div className="max-w-4xl mx-auto">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">Interview Feedback</h1>
-            <p className="text-gray-400 mb-1">Feedback is not yet available for this interview.</p>
-            <p className="text-gray-500 text-sm mb-6">
+          <Card className="p-10 text-center">
+            <h1 className="text-xl font-bold text-foreground mb-2">Interview Feedback</h1>
+            <p className="text-muted-foreground mb-1">
+              Feedback is not yet available for this interview.
+            </p>
+            <p className="text-sm text-muted-foreground/70 mb-6">
               Feedback typically takes 10-15 seconds to generate.
             </p>
             <div className="flex items-center justify-center gap-3">
-              <a
-                href={`/feedback/${id}`}
-                className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-              >
-                <RefreshCw size={14} />
-                Refresh
-              </a>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 text-sm text-gray-400 transition hover:text-white"
-              >
-                <ArrowLeft size={16} />
-                Back to Dashboard
-              </Link>
+              <Button variant="secondary" size="sm" asChild>
+                <a href={`/feedback/${id}`}>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+                <Link href="/dashboard">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Dashboard
+                </Link>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </ErrorBoundary>
     );
@@ -55,33 +59,20 @@ export default async function FeedbackPage({ params }: { params: Promise<{ id: s
   return (
     <ErrorBoundary>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{interview.title as string}</h1>
-            <p className="text-gray-400 text-sm">
-              {interview.company as string} &middot;{" "}
-              {new Date(interview.createdAt as Date).toLocaleDateString()}
-            </p>
-          </div>
+        <PageHeader
+          title={interview.title as string}
+          description={`${interview.company as string} · ${new Date(interview.createdAt as Date).toLocaleDateString()}`}
+        >
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/interviews/${id}/report`}
-              target="_blank"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-            >
-              <Download size={16} />
-              Download PDF
-            </a>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-            >
-              <ArrowLeft size={16} />
-              Dashboard
-            </Link>
+            <DownloadReportButton reportUrl={`/api/interviews/${id}/report`} />
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
           </div>
-        </div>
+        </PageHeader>
 
         <FeedbackPageTabs
           feedback={feedback}

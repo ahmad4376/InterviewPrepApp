@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Loader2,
   ArrowLeft,
   CheckCircle2,
   XCircle,
@@ -15,6 +14,11 @@ import {
   Calendar,
   Minus,
 } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import { cn } from "@/app/lib/cn";
 
 interface Submission {
   problemId: string;
@@ -47,29 +51,29 @@ interface CodingInterviewResult {
   createdAt: string;
 }
 
-function getDifficultyColor(d: string) {
+function getDifficultyClass(d: string) {
   switch (d.toLowerCase()) {
     case "easy":
-      return "text-green-400";
+      return "text-accent";
     case "medium":
-      return "text-yellow-400";
+      return "text-yellow-500";
     case "hard":
-      return "text-red-400";
+      return "text-destructive";
     default:
-      return "text-gray-400";
+      return "text-muted-foreground";
   }
 }
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "accepted":
-      return <CheckCircle2 size={16} className="text-green-400" />;
+      return <CheckCircle2 className="h-4 w-4 text-accent" />;
     case "wrong_answer":
-      return <XCircle size={16} className="text-red-400" />;
+      return <XCircle className="h-4 w-4 text-destructive" />;
     case "error":
-      return <XCircle size={16} className="text-orange-400" />;
+      return <XCircle className="h-4 w-4 text-orange-500" />;
     default:
-      return <Minus size={16} className="text-gray-500" />;
+      return <Minus className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -83,6 +87,17 @@ function statusLabel(status: string) {
       return "Error";
     default:
       return "Not Attempted";
+  }
+}
+
+function statusClass(status: string) {
+  switch (status) {
+    case "accepted":
+      return "text-accent";
+    case "not_attempted":
+      return "text-muted-foreground";
+    default:
+      return "text-destructive";
   }
 }
 
@@ -103,19 +118,29 @@ export default function CodingResultsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-8 h-8 animate-spin text-[#3ecf8e]" />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Skeleton className="h-9 w-48" />
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-72 rounded-xl" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="max-w-4xl mx-auto text-center py-24">
-        <p className="text-gray-400">Results not found.</p>
-        <Link href="/dashboard" className="text-[#3ecf8e] hover:underline mt-2 inline-block">
-          Back to Dashboard
-        </Link>
+      <div className="max-w-4xl mx-auto py-24">
+        <EmptyState
+          title="Results not found"
+          action={
+            <a href="/dashboard" className="text-sm text-primary hover:underline">
+              Back to Dashboard
+            </a>
+          }
+        />
       </div>
     );
   }
@@ -138,30 +163,29 @@ export default function CodingResultsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition mb-4"
-        >
-          <ArrowLeft size={14} />
-          Back to Dashboard
-        </Link>
+      <div>
+        <Button variant="ghost" size="sm" asChild className="mb-4 gap-1.5 text-muted-foreground">
+          <Link href="/dashboard">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
 
-        <h1 className="text-2xl font-bold text-white mb-1">{data.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-gray-400">
+        <h1 className="text-2xl font-bold text-foreground mb-1">{data.title}</h1>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <Calendar size={14} />
+            <Calendar className="h-3.5 w-3.5" />
             {new Date(data.createdAt).toLocaleDateString()}
           </span>
           <span className="inline-flex items-center gap-1 capitalize">
-            <Code2 size={14} />
+            <Code2 className="h-3.5 w-3.5" />
             {data.difficulty} · {data.numProblems} problems
           </span>
           {duration !== null && (
             <span className="inline-flex items-center gap-1">
-              <Clock size={14} />
+              <Clock className="h-3.5 w-3.5" />
               {formatDuration(duration)}
             </span>
           )}
@@ -169,34 +193,34 @@ export default function CodingResultsPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-center">
-          <p className="text-3xl font-bold text-white">
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="p-5 text-center">
+          <p className="text-3xl font-bold text-foreground">
             {solved}/{data.numProblems}
           </p>
-          <p className="text-sm text-gray-400 mt-1">Problems Solved</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-center">
-          <p className="text-3xl font-bold text-white">
+          <p className="text-sm text-muted-foreground mt-1">Problems Solved</p>
+        </Card>
+        <Card className="p-5 text-center">
+          <p className="text-3xl font-bold text-foreground">
             {duration !== null ? formatDuration(duration) : "N/A"}
           </p>
-          <p className="text-sm text-gray-400 mt-1">Time Taken</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-center">
-          <p className="text-3xl font-bold text-white">
+          <p className="text-sm text-muted-foreground mt-1">Time Taken</p>
+        </Card>
+        <Card className="p-5 text-center">
+          <p className="text-3xl font-bold text-foreground">
             {data.numProblems > 0 ? Math.round((solved / data.numProblems) * 100) : 0}%
           </p>
-          <p className="text-sm text-gray-400 mt-1">Score</p>
-        </div>
+          <p className="text-sm text-muted-foreground mt-1">Score</p>
+        </Card>
       </div>
 
       {/* Problems Table */}
-      <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-        <div className="px-5 py-3 border-b border-white/10">
-          <h2 className="text-sm font-semibold text-white">Problem Breakdown</h2>
+      <Card className="overflow-hidden p-0">
+        <div className="px-5 py-3 border-b border-border">
+          <h2 className="text-sm font-semibold text-foreground">Problem Breakdown</h2>
         </div>
 
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-border/50">
           {data.submissions.map((sub, idx) => {
             const problem = problemMap.get(sub.problemId);
             const isExpanded = expandedProblem === sub.problemId;
@@ -205,42 +229,37 @@ export default function CodingResultsPage() {
               <div key={sub.problemId}>
                 <button
                   onClick={() => setExpandedProblem(isExpanded ? null : sub.problemId)}
-                  className="w-full px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition text-left"
+                  className="w-full px-5 py-3 flex items-center gap-4 hover:bg-muted/30 transition text-left"
                 >
-                  <span className="text-xs text-gray-500 w-6">{idx + 1}</span>
+                  <span className="text-xs text-muted-foreground w-6">{idx + 1}</span>
                   <StatusIcon status={sub.status} />
-                  <span className="flex-1 text-sm text-white truncate">
+                  <span className="flex-1 text-sm text-foreground truncate">
                     {problem?.title ?? sub.problemId}
                   </span>
                   {problem && (
                     <span
-                      className={`text-xs font-medium ${getDifficultyColor(problem.difficulty_bucket)}`}
+                      className={cn(
+                        "text-xs font-medium",
+                        getDifficultyClass(problem.difficulty_bucket),
+                      )}
                     >
                       {problem.difficulty_bucket}
                     </span>
                   )}
-                  <span
-                    className={`text-xs font-medium ${
-                      sub.status === "accepted"
-                        ? "text-green-400"
-                        : sub.status === "not_attempted"
-                          ? "text-gray-500"
-                          : "text-red-400"
-                    }`}
-                  >
+                  <span className={cn("text-xs font-medium", statusClass(sub.status))}>
                     {statusLabel(sub.status)}
                   </span>
                   {sub.testsTotal > 0 && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {sub.testsPassed}/{sub.testsTotal}
                     </span>
                   )}
-                  <span className="text-xs text-gray-500">{sub.runtime}</span>
+                  <span className="text-xs text-muted-foreground">{sub.runtime}</span>
                   {sub.code ? (
                     isExpanded ? (
-                      <ChevronDown size={14} className="text-gray-500" />
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     ) : (
-                      <ChevronRight size={14} className="text-gray-500" />
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                     )
                   ) : (
                     <span className="w-3.5" />
@@ -249,9 +268,9 @@ export default function CodingResultsPage() {
 
                 {isExpanded && sub.code && (
                   <div className="px-5 pb-4">
-                    <div className="rounded-lg bg-gray-900 border border-gray-700 overflow-hidden">
-                      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50">
-                        <span className="text-xs text-gray-400 font-mono capitalize">
+                    <div className="rounded-lg bg-[#0d1117] border border-border overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
+                        <span className="text-xs text-muted-foreground font-mono capitalize">
                           {sub.language}
                         </span>
                       </div>
@@ -265,7 +284,7 @@ export default function CodingResultsPage() {
             );
           })}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

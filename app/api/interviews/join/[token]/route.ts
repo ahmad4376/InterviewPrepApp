@@ -3,6 +3,7 @@ import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
 import CandidateSession from "app/models/CandidateSession";
+import Organization from "app/models/Organization";
 import { currentUser } from "@clerk/nextjs/server";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -48,6 +49,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     });
   }
 
+  // Fetch org branding if the interview belongs to an organization
+  let branding = null;
+  if (interview.organizationId) {
+    const org = await Organization.findOne({
+      clerkOrgId: interview.organizationId,
+    }).lean();
+    if (org?.branding) {
+      branding = org.branding;
+    }
+  }
+
   return NextResponse.json({
     status: "canJoin",
     interviewId: interview._id,
@@ -55,6 +67,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     company: interview.company,
     description: interview.description,
     totalQuestions: interview.totalQuestions,
+    branding,
   });
 }
 

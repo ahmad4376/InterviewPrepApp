@@ -27,6 +27,9 @@
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "jsx": "preserve",
     "plugins": [
       {

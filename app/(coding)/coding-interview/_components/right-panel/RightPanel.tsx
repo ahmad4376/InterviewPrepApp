@@ -47,7 +47,7 @@ export default function RightPanel({
   isInteractive,
 }: RightPanelProps) {
   return (
-    <div className="h-full flex flex-col bg-[#0b0b0b]">
+    <div className="h-full flex flex-col bg-background">
       <EditorToolbar onReset={onReset} />
 
       {consoleExpanded ? (

@@ -1,10 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Users, Star, Copy, Check, Loader2, ArrowRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  Star,
+  Copy,
+  Check,
+  ArrowRight,
+  Download,
+  GitCompare,
+} from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Badge } from "@/app/components/ui/badge";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import { PageHeader } from "@/app/components/ui/page-header";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/data-table";
+import { Card } from "@/app/components/ui/card";
 
 interface CandidateRow {
   _id: string;
@@ -15,20 +38,19 @@ interface CandidateRow {
   createdAt: string;
 }
 
-const statusConfig = {
-  scheduled: { label: "Scheduled", color: "bg-blue-500/20 text-blue-400" },
-  "in-progress": {
-    label: "In Progress",
-    color: "bg-yellow-500/20 text-yellow-400",
-  },
-  completed: { label: "Completed", color: "bg-green-500/20 text-green-400" },
-} as const;
+const statusVariant: Record<CandidateRow["status"], "scheduled" | "in-progress" | "completed"> = {
+  scheduled: "scheduled",
+  "in-progress": "in-progress",
+  completed: "completed",
+};
 
 export default function CandidatesPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch(`/api/interviews/${id}/candidates`)
@@ -44,7 +66,6 @@ export default function CandidatesPage() {
 
   const handleCopyLink = async () => {
     try {
-      // Fetch interview to get shareToken
       const res = await fetch(`/api/interviews/${id}`);
       const interview = await res.json();
       if (interview.shareToken) {
@@ -60,147 +81,183 @@ export default function CandidatesPage() {
     }
   };
 
+  const toggleSelect = (candidateId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(candidateId)) next.delete(candidateId);
+      else next.add(candidateId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const completedIds = candidates
+      .filter((c) => c.status === "completed" && c.overallScore !== null)
+      .map((c) => c._id);
+    if (selected.size === completedIds.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(completedIds));
+    }
+  };
+
+  const handleCompare = () => {
+    if (selected.size < 2) {
+      toast.error("Select at least 2 candidates to compare");
+      return;
+    }
+    router.push(`/interviews/${id}/compare?candidates=${Array.from(selected).join(",")}`);
+  };
+
+  const completedCount = candidates.filter(
+    (c) => c.status === "completed" && c.overallScore !== null,
+  ).length;
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={32} className="animate-spin text-[#3ecf8e]" />
+      <div className="mx-auto max-w-4xl space-y-6">
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-72 rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Users size={24} />
-              Candidates
-            </h1>
-            <p className="text-sm text-gray-400">
-              {candidates.length} candidate{candidates.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleCopyLink}
-          className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-        >
-          {copied ? (
-            <>
-              <Check size={14} className="text-green-400" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Copy size={14} />
-              Copy Invite Link
-            </>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title="Candidates"
+        description={`${candidates.length} candidate${candidates.length !== 1 ? "s" : ""}`}
+      >
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
+            </Link>
+          </Button>
+          {selected.size >= 2 && (
+            <Button size="sm" onClick={handleCompare} className="gap-1.5">
+              <GitCompare className="h-3.5 w-3.5" />
+              Compare ({selected.size})
+            </Button>
           )}
-        </button>
-      </div>
+          <Button variant="secondary" size="sm" asChild>
+            <a href={`/api/interviews/${id}/candidates/export?format=csv`} download>
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </a>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleCopyLink} className="gap-1.5">
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-accent" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Invite Link
+              </>
+            )}
+          </Button>
+        </div>
+      </PageHeader>
 
       {candidates.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur text-center">
-          <Users size={48} className="text-gray-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">No candidates yet</h2>
-          <p className="text-gray-400">Share the invite link with candidates to get started.</p>
-        </div>
+        <Card className="p-12">
+          <EmptyState
+            icon={Users}
+            title="No candidates yet"
+            description="Share the invite link with candidates to get started."
+          />
+        </Card>
       ) : (
-        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th
-                  scope="col"
-                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
-                >
-                  Candidate
-                </th>
-                <th
-                  scope="col"
-                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th
-                  scope="col"
-                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
-                >
-                  Score
-                </th>
-                <th
-                  scope="col"
-                  className="px-5 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
-                >
-                  Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-5 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider"
-                >
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
+        <Card className="overflow-hidden p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  {completedCount > 0 && (
+                    <input
+                      type="checkbox"
+                      checked={selected.size === completedCount && completedCount > 0}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-border bg-background accent-primary"
+                    />
+                  )}
+                </TableHead>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Score</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {candidates.map((c) => {
-                const status = statusConfig[c.status];
+                const canSelect = c.status === "completed" && c.overallScore !== null;
                 return (
-                  <tr key={c._id} className="hover:bg-white/[0.02]">
-                    <td className="px-5 py-4">
-                      <p className="text-white font-medium text-sm">{c.candidateName}</p>
-                      {c.candidateEmail && (
-                        <p className="text-gray-500 text-xs">{c.candidateEmail}</p>
+                  <TableRow key={c._id}>
+                    <TableCell>
+                      {canSelect && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(c._id)}
+                          onChange={() => toggleSelect(c._id)}
+                          className="h-4 w-4 rounded border-border bg-background accent-primary"
+                        />
                       )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}
-                      >
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-medium text-sm text-foreground">{c.candidateName}</p>
+                      {c.candidateEmail && (
+                        <p className="text-xs text-muted-foreground">{c.candidateEmail}</p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[c.status]}>
+                        {c.status === "in-progress"
+                          ? "In Progress"
+                          : c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {c.overallScore !== null ? (
                         <div className="flex items-center gap-1">
-                          <Star size={14} className="fill-[#3ecf8e] text-[#3ecf8e]" />
-                          <span className="text-white text-sm font-medium">
+                          <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+                          <span className="text-sm font-medium text-foreground">
                             {c.overallScore.toFixed(1)}
                           </span>
-                          <span className="text-gray-500 text-xs">/5</span>
+                          <span className="text-xs text-muted-foreground">/5</span>
                         </div>
                       ) : (
-                        <span className="text-gray-500 text-sm">--</span>
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
-                    </td>
-                    <td className="px-5 py-4 text-gray-400 text-sm">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
                       {new Date(c.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-5 py-4 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       {c.status === "completed" && c.overallScore !== null && (
-                        <Link
-                          href={`/interviews/${id}/candidates/${c._id}/feedback`}
-                          className="inline-flex items-center gap-1 text-sm text-[#3ecf8e] transition hover:text-[#33b87a]"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="gap-1 text-primary hover:text-primary"
                         >
-                          View Feedback
-                          <ArrowRight size={14} />
-                        </Link>
+                          <Link href={`/interviews/${id}/candidates/${c._id}/feedback`}>
+                            View Feedback
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

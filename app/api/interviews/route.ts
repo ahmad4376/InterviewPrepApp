@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
-import { getAuthUserId } from "app/lib/auth";
+import { getAuthUserId, getAuthContext } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
 import { generatePoolQuestions, generateHRQuestions } from "app/lib/openai";
 import { selectQuestions } from "app/lib/questionSelection";
 import { buildSamplingPlan } from "app/lib/sampling";
+import {
+  checkUsageLimit,
+  checkFeature,
+  incrementUsage,
+  getUserWithTier,
+} from "app/lib/subscription/gate";
 import Interview from "app/models/Interview";
 import type { IPoolQuestion } from "app/lib/types";
 import type { ResumeData } from "app/lib/resumeParser";
@@ -17,6 +23,20 @@ export async function POST(request: Request) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check monthly voice interview usage limit
+  const { allowed, used, limit } = await checkUsageLimit(userId, "voiceInterviews");
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        error: "Monthly interview limit reached",
+        used,
+        limit,
+        upgrade: true,
+      },
+      { status: 403 },
+    );
   }
 
   let body: unknown;
@@ -48,37 +68,25 @@ export async function POST(request: Request) {
     description: string;
   };
   const isMassInterview = !!(body as { isMassInterview?: boolean }).isMassInterview;
+  const rawFocusAreas = (body as Record<string, unknown>).focusAreas;
+  const focusAreas = Array.isArray(rawFocusAreas)
+    ? rawFocusAreas.filter((a): a is string => typeof a === "string")
+    : undefined;
 
-  // Extract and validate optional resume data
-  const rawResumeData = (body as { resumeData?: unknown }).resumeData;
-  let resumeData: ResumeData | null = null;
-  if (rawResumeData && typeof rawResumeData === "object") {
-    const rd = rawResumeData as Record<string, unknown>;
-    if (
-      typeof rd.name === "string" &&
-      Array.isArray(rd.skills) &&
-      Array.isArray(rd.experience) &&
-      Array.isArray(rd.education) &&
-      Array.isArray(rd.projects) &&
-      Array.isArray(rd.certifications) &&
-      Array.isArray(rd.languages)
-    ) {
-      resumeData = {
-        name: rd.name,
-        email: typeof rd.email === "string" ? rd.email : undefined,
-        phone: typeof rd.phone === "string" ? rd.phone : undefined,
-        summary: typeof rd.summary === "string" ? rd.summary : undefined,
-        skills: rd.skills.filter((s): s is string => typeof s === "string").slice(0, 100),
-        experience: (rd.experience as unknown[]).slice(0, 50) as ResumeData["experience"],
-        education: (rd.education as unknown[]).slice(0, 30) as ResumeData["education"],
-        projects: (rd.projects as unknown[]).slice(0, 50) as ResumeData["projects"],
-        certifications: rd.certifications
-          .filter((s): s is string => typeof s === "string")
-          .slice(0, 50),
-        languages: rd.languages.filter((s): s is string => typeof s === "string").slice(0, 30),
-      };
+  // Gate mass interviews to Business tier
+  if (isMassInterview) {
+    const canMass = await checkFeature(userId, "massInterviews");
+    if (!canMass) {
+      return NextResponse.json(
+        { error: "Mass interviews require a Business plan", upgrade: true },
+        { status: 403 },
+      );
     }
   }
+
+  // Pull resume data from user profile (if they've uploaded one)
+  const user = await getUserWithTier(userId);
+  const resumeData = (user.resumeData as ResumeData | null) ?? null;
 
   // Validate interviewType
   const VALID_INTERVIEW_TYPES = ["technical", "hr"] as const;
@@ -113,9 +121,9 @@ export async function POST(request: Request) {
   let questionPool: IPoolQuestion[] = [];
 
   if (interviewType === "hr") {
-    // HR interviews use LLM-generated HR screening questions
+    // HR interviews use LLM-generated HR screening questions with focus areas
     console.log("Generating HR screening questions via LLM");
-    questionPool = await generateHRQuestions(title, description, poolSize);
+    questionPool = await generateHRQuestions(title, description, poolSize, focusAreas);
   } else {
     // Technical interviews: Fetch questions from DB (pool is larger than what we'll ask)
     try {
@@ -150,8 +158,12 @@ export async function POST(request: Request) {
 
   await connectDB();
 
+  // Stamp org context if user is acting within an organization
+  const { orgId } = await getAuthContext();
+
   const interview = await Interview.create({
     userId,
+    organizationId: orgId ?? null,
     title,
     company,
     description,
@@ -175,6 +187,9 @@ export async function POST(request: Request) {
     ...(isMassInterview ? { shareToken: crypto.randomUUID() } : {}),
   });
 
+  // Track usage after successful creation
+  await incrementUsage(userId, "voiceInterviews");
+
   return NextResponse.json(
     {
       interviewId: String(interview._id),
@@ -186,16 +201,21 @@ export async function POST(request: Request) {
 }
 
 export async function GET(_request: Request) {
-  const userId = await getAuthUserId();
+  const { userId, orgId } = await getAuthContext();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectDB();
 
-  const interviews = await Interview.find({ userId })
+  // When in an org context, show org-scoped interviews; otherwise personal
+  const filter = orgId ? { organizationId: orgId } : { userId, organizationId: null };
+
+  const interviews = await Interview.find(filter)
     .sort({ createdAt: -1 })
-    .select("title company status createdAt feedback isMassInterview shareToken interviewType")
+    .select(
+      "title company status createdAt feedback isMassInterview shareToken interviewType userId",
+    )
     .lean();
 
   const result = interviews.map((i) => ({

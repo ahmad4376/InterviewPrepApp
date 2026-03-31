@@ -18,10 +18,25 @@ import {
   X,
   Pencil,
   Loader2,
-  ChevronDown,
   Code2,
   Timer,
+  List,
 } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { Badge } from "@/app/components/ui/badge";
+import { Input } from "@/app/components/ui/input";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { PageHeader } from "@/app/components/ui/page-header";
+import { EmptyState } from "@/app/components/ui/empty-state";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+import { cn } from "@/app/lib/cn";
 
 interface Interview {
   _id: string;
@@ -32,6 +47,7 @@ interface Interview {
   hasFeedback?: boolean;
   isMassInterview?: boolean;
   shareToken?: string;
+  interviewType?: "technical" | "hr";
 }
 
 interface CodingInterviewItem {
@@ -50,31 +66,33 @@ interface DashboardItem {
   status: "scheduled" | "in-progress" | "completed";
   createdAt: string;
   type: "voice" | "coding";
-  // Voice fields
+  interviewType?: "technical" | "hr";
   company?: string;
   hasFeedback?: boolean;
   isMassInterview?: boolean;
   shareToken?: string;
-  // Coding fields
   difficulty?: string;
   numProblems?: number;
   timeLimit?: number | null;
 }
 
-type StatusFilter = "all" | "scheduled" | "in-progress" | "completed" | "coding";
+type StatusFilter =
+  | "all"
+  | "scheduled"
+  | "in-progress"
+  | "completed"
+  | "technical"
+  | "hr"
+  | "coding";
 type SortBy = "newest" | "oldest" | "a-z" | "z-a";
-
-const statusConfig = {
-  scheduled: { label: "Scheduled", color: "bg-blue-500/20 text-blue-400" },
-  "in-progress": { label: "In Progress", color: "bg-yellow-500/20 text-yellow-400" },
-  completed: { label: "Completed", color: "bg-green-500/20 text-green-400" },
-} as const;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "scheduled", label: "Scheduled" },
   { value: "in-progress", label: "In Progress" },
   { value: "completed", label: "Completed" },
+  { value: "technical", label: "Technical" },
+  { value: "hr", label: "HR" },
   { value: "coding", label: "Coding" },
 ];
 
@@ -87,22 +105,22 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur flex items-center justify-between gap-4 animate-pulse">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-5 w-48 rounded bg-white/10" />
-          <div className="h-5 w-20 rounded-full bg-white/10" />
+    <Card className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex-1 min-w-0 space-y-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-5 w-20 rounded-full" />
         </div>
         <div className="flex items-center gap-4">
-          <div className="h-4 w-28 rounded bg-white/5" />
-          <div className="h-4 w-24 rounded bg-white/5" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-24" />
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <div className="h-9 w-20 rounded-lg bg-white/10" />
-        <div className="h-9 w-9 rounded-lg bg-white/5" />
+        <Skeleton className="h-9 w-20 rounded-md" />
+        <Skeleton className="h-9 w-9 rounded-md" />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -112,13 +130,9 @@ function DashboardContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
-
-  // Search/Filter/Sort state
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("newest");
-
-  // Edit modal state
   const [editingInterview, setEditingInterview] = useState<{
     _id: string;
     title: string;
@@ -151,6 +165,7 @@ function DashboardContent() {
           status: i.status,
           createdAt: i.createdAt,
           type: "voice" as const,
+          interviewType: i.interviewType ?? "technical",
           company: i.company,
           hasFeedback: i.hasFeedback,
           isMassInterview: i.isMassInterview,
@@ -236,6 +251,9 @@ function DashboardContent() {
       .filter((i) => {
         if (statusFilter === "all") return true;
         if (statusFilter === "coding") return i.type === "coding";
+        if (statusFilter === "technical")
+          return i.type === "voice" && i.interviewType === "technical";
+        if (statusFilter === "hr") return i.type === "voice" && i.interviewType === "hr";
         return i.status === statusFilter;
       })
       .filter((i) => {
@@ -257,17 +275,12 @@ function DashboardContent() {
       });
   }, [items, statusFilter, searchQuery, sortBy]);
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-  };
-
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="h-8 w-48 rounded bg-white/10 animate-pulse" />
-          <div className="h-10 w-36 rounded-lg bg-white/10 animate-pulse" />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-36 rounded-md" />
         </div>
         <div className="space-y-3">
           <SkeletonCard />
@@ -281,89 +294,77 @@ function DashboardContent() {
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur text-center">
-          <h2 className="text-xl font-bold text-white mb-2">No interviews yet</h2>
-          <p className="text-gray-400 mb-6">Create your first mock interview to get started.</p>
-          <Link
-            href="/create-interview"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-2.5 font-medium text-black transition hover:bg-[#33b87a]"
-          >
-            <Plus size={18} />
-            Create Interview
-          </Link>
-        </div>
+        <EmptyState
+          icon={List}
+          title="No interviews yet"
+          description="Create your first mock interview to get started."
+          action={
+            <Button asChild>
+              <Link href="/create-interview">
+                <Plus className="h-4 w-4" />
+                Create Interview
+              </Link>
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Your Interviews</h1>
-        <Link
-          href="/create-interview"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-        >
-          <Plus size={16} />
-          New Interview
-        </Link>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <PageHeader title="Your Interviews">
+        <Button asChild size="sm">
+          <Link href="/create-interview">
+            <Plus className="h-4 w-4" />
+            New Interview
+          </Link>
+        </Button>
+      </PageHeader>
 
-      {/* Search / Filter / Sort Toolbar */}
-      <div className="mb-4 space-y-3">
+      {/* Toolbar */}
+      <div className="space-y-3">
         <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title or company..."
-              className="w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-8 py-2 text-sm text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-500 hover:text-white"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Sort */}
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="appearance-none rounded-lg border border-white/10 bg-white/5 pl-3 pr-8 py-2 text-sm text-gray-300 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e] cursor-pointer"
-            >
+          <Input
+            startIcon={<Search />}
+            endIcon={
+              searchQuery ? (
+                <button onClick={() => setSearchQuery("")} aria-label="Clear search">
+                  <X className="h-4 w-4" />
+                </button>
+              ) : undefined
+            }
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by title or company..."
+            className="flex-1"
+          />
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
               {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-[#0c0c0c]">
+                <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown
-              size={14}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-            />
-          </div>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Status Filter Pills */}
-        <div className="flex items-center gap-2">
+        {/* Filter pills */}
+        <div className="flex flex-wrap items-center gap-2">
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setStatusFilter(opt.value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 statusFilter === opt.value
-                  ? "bg-white/15 text-white"
-                  : "text-gray-400 hover:text-white"
-              }`}
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:border-border hover:text-foreground",
+              )}
             >
               {opt.label}
             </button>
@@ -371,215 +372,225 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Interview Cards or Empty Filter State */}
+      {/* List or empty filter state */}
       {filteredInterviews.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
-          <p className="text-gray-400 mb-3">No interviews match your filters.</p>
-          <button
-            onClick={clearFilters}
-            className="text-sm font-medium text-[#3ecf8e] transition hover:text-[#33b87a]"
-          >
-            Clear filters
-          </button>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No interviews match your filters"
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("all");
+              }}
+            >
+              Clear filters
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {filteredInterviews.map((item) => {
-            const status = statusConfig[item.status];
             const isConfirming = confirmDeleteId === item._id;
             const isDeleting = deletingId === item._id;
             const isLoadingEdit = loadingEditId === item._id;
             const isCoding = item.type === "coding";
 
+            const statusVariant = {
+              scheduled: "scheduled" as const,
+              "in-progress": "in-progress" as const,
+              completed: "completed" as const,
+            }[item.status];
+
             return (
               <div key={`${item.type}-${item._id}`}>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur flex items-center justify-between gap-4">
+                <Card className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-shadow">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-white font-semibold truncate">{item.title}</h3>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-foreground truncate">{item.title}</h3>
+                      <Badge variant={statusVariant}>
+                        {item.status === "in-progress"
+                          ? "In Progress"
+                          : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </Badge>
+                      <Badge
+                        variant={
+                          isCoding
+                            ? "coding"
+                            : ((item.interviewType as "technical" | "hr") ?? "technical")
+                        }
                       >
-                        {status.label}
-                      </span>
-                      {isCoding && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
-                          <Code2 size={12} />
-                          Coding
-                        </span>
-                      )}
+                        {isCoding ? "Coding" : item.interviewType === "hr" ? "HR" : "Technical"}
+                      </Badge>
                       {item.isMassInterview && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
-                          <Users size={12} />
+                        <Badge variant="secondary">
+                          <Users className="h-3 w-3" />
                           Mass
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       {isCoding ? (
                         <>
                           <span className="inline-flex items-center gap-1">
-                            <Code2 size={14} />
+                            <Code2 className="h-3.5 w-3.5" />
                             {item.numProblems} problems · {item.difficulty}
                           </span>
                           {item.timeLimit && (
                             <span className="inline-flex items-center gap-1">
-                              <Timer size={14} />
+                              <Timer className="h-3.5 w-3.5" />
                               {item.timeLimit} min
                             </span>
                           )}
                         </>
                       ) : (
                         <span className="inline-flex items-center gap-1">
-                          <Building2 size={14} />
+                          <Building2 className="h-3.5 w-3.5" />
                           {item.company}
                         </span>
                       )}
                       <span className="inline-flex items-center gap-1">
-                        <Calendar size={14} />
+                        <Calendar className="h-3.5 w-3.5" />
                         {new Date(item.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {isCoding ? (
                       <>
                         {item.status === "scheduled" && (
-                          <Link
-                            href={`/coding-session/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-                          >
-                            Start
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm">
+                            <Link href={`/coding-session/${item._id}`}>
+                              Start <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                         {item.status === "in-progress" && (
-                          <Link
-                            href={`/coding-session/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
-                          >
-                            Resume
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm" variant="secondary" className="text-yellow-500">
+                            <Link href={`/coding-session/${item._id}`}>
+                              Resume <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                         {item.status === "completed" && (
-                          <Link
-                            href={`/coding-results/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
-                          >
-                            View Results
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm" variant="success">
+                            <Link href={`/coding-results/${item._id}`}>
+                              View Results <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                       </>
                     ) : item.isMassInterview ? (
                       <>
                         {item.shareToken && (
-                          <button
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={() => handleCopyLink(item.shareToken!)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20"
                           >
                             {copiedToken === item.shareToken ? (
                               <>
-                                <Check size={14} className="text-green-400" />
+                                <Check className="h-3.5 w-3.5 text-accent" />
                                 Copied!
                               </>
                             ) : (
                               <>
-                                <Copy size={14} />
+                                <Copy className="h-3.5 w-3.5" />
                                 Copy Link
                               </>
                             )}
-                          </button>
+                          </Button>
                         )}
-                        <Link
-                          href={`/interviews/${item._id}/candidates`}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-purple-500/20 px-3 py-2 text-sm font-medium text-purple-400 transition hover:bg-purple-500/30"
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="ghost"
+                          className="text-purple-400 hover:text-purple-300"
                         >
-                          <Users size={14} />
-                          Candidates
-                        </Link>
+                          <Link href={`/interviews/${item._id}/candidates`}>
+                            <Users className="h-3.5 w-3.5" />
+                            Candidates
+                          </Link>
+                        </Button>
                       </>
                     ) : (
                       <>
                         {item.status === "scheduled" && (
-                          <Link
-                            href={`/interview/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-                          >
-                            Start
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm">
+                            <Link href={`/interview/${item._id}`}>
+                              Start <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                         {item.status === "in-progress" && (
-                          <Link
-                            href={`/interview/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30"
-                          >
-                            Resume
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm" variant="secondary" className="text-yellow-500">
+                            <Link href={`/interview/${item._id}`}>
+                              Resume <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                         {item.status === "completed" && item.hasFeedback && (
-                          <Link
-                            href={`/feedback/${item._id}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#3ecf8e]/20 px-4 py-2 text-sm font-medium text-[#3ecf8e] transition hover:bg-[#3ecf8e]/30"
-                          >
-                            View Feedback
-                            <ArrowRight size={14} />
-                          </Link>
+                          <Button asChild size="sm" variant="success">
+                            <Link href={`/feedback/${item._id}`}>
+                              View Feedback <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                         )}
                         {item.status === "completed" && !item.hasFeedback && (
-                          <span className="px-4 py-2 text-sm text-gray-500">Completed</span>
+                          <span className="px-3 py-2 text-sm text-muted-foreground">Completed</span>
                         )}
                       </>
                     )}
+
                     {!isCoding && item.status === "scheduled" && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => handleEditClick(item)}
                         disabled={isLoadingEdit}
                         aria-label="Edit interview"
-                        className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
                       >
                         {isLoadingEdit ? (
-                          <Loader2 size={16} className="animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Pencil size={16} />
+                          <Pencil className="h-4 w-4" />
                         )}
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => setConfirmDeleteId(isConfirming ? null : item._id)}
                       disabled={isDeleting}
                       aria-label="Delete interview"
-                      className="rounded-lg p-2 text-gray-400 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     >
-                      <Trash2 size={16} />
-                    </button>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                </Card>
 
                 {/* Delete confirmation */}
                 {isConfirming && (
-                  <div className="mt-1 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 flex items-center justify-between">
-                    <p className="text-sm text-gray-300">
+                  <div className="mt-1 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-4">
+                    <p className="text-sm text-foreground">
                       Delete this interview? This cannot be undone.
                     </p>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/20"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
                         onClick={() => handleDelete(item._id, item.type)}
                         disabled={isDeleting}
-                        className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
                       >
                         {isDeleting ? "Deleting..." : "Delete"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -589,7 +600,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editingInterview && (
         <EditInterviewModal
           interview={editingInterview}

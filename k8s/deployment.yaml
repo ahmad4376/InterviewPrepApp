@@ -20,11 +20,10 @@ spec:
       labels:
         app: interview-prep
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
         - name: interview-prep
-          image: ghcr.io/IMAGE_PLACEHOLDER:TAG_PLACEHOLDER
+          image: interview-prep-app:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           resources:

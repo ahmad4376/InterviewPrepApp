@@ -3,7 +3,10 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import { Card } from "@/app/components/ui/card";
+import { Button } from "@/app/components/ui/button";
 
 interface JoinInfo {
   status: "canJoin" | "resume" | "completed";
@@ -29,7 +32,7 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) {
-          const errorMsg = data.error || "Failed to load interview";
+          const errorMsg = (data.error as string | undefined) ?? "Failed to load interview";
           setError(errorMsg);
           toast.error(errorMsg);
           return;
@@ -47,12 +50,10 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
     setJoining(true);
     setError("");
     try {
-      const res = await fetch(`/api/interviews/join/${token}`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/interviews/join/${token}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        const errorMsg = data.error || "Failed to join interview";
+        const errorMsg = (data.error as string | undefined) ?? "Failed to join interview";
         setError(errorMsg);
         toast.error(errorMsg);
         return;
@@ -70,18 +71,21 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={32} className="animate-spin text-[#3ecf8e]" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !info) {
     return (
       <div className="max-w-md mx-auto">
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-          <h1 className="text-xl font-bold text-white mb-2">Unable to Join</h1>
-          <p className="text-gray-400">{error}</p>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-8 text-center border-destructive/30 bg-destructive/5">
+            <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
+            <h1 className="text-xl font-bold text-foreground mb-2">Unable to Join</h1>
+            <p className="text-muted-foreground">{error}</p>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -91,18 +95,17 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
   if (info.status === "completed") {
     return (
       <div className="max-w-md mx-auto">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <CheckCircle2 size={48} className="text-[#3ecf8e] mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-white mb-2">Already Completed</h1>
-          <p className="text-gray-400 mb-6">You have already completed this interview.</p>
-          <button
-            onClick={() => router.push(`/join/${token}/feedback/${info.sessionId}`)}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-2.5 font-medium text-black transition hover:bg-[#33b87a]"
-          >
-            View Feedback
-            <ArrowRight size={16} />
-          </button>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-8 text-center">
+            <CheckCircle2 className="h-12 w-12 text-accent mx-auto mb-4" />
+            <h1 className="text-xl font-bold text-foreground mb-2">Already Completed</h1>
+            <p className="text-muted-foreground mb-6">You have already completed this interview.</p>
+            <Button onClick={() => router.push(`/join/${token}/feedback/${info.sessionId}`)}>
+              View Feedback
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -110,19 +113,22 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
   if (info.status === "resume") {
     return (
       <div className="max-w-md mx-auto">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-xl font-bold text-white mb-2">Interview In Progress</h1>
-          <p className="text-gray-400 mb-6">
-            You have an interview session in progress. Resume where you left off.
-          </p>
-          <button
-            onClick={() => router.push(`/join/${token}/session/${info.sessionId}`)}
-            className="inline-flex items-center gap-2 rounded-lg bg-yellow-500/20 px-5 py-2.5 font-medium text-yellow-400 transition hover:bg-yellow-500/30"
-          >
-            Resume Interview
-            <ArrowRight size={16} />
-          </button>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-8 text-center">
+            <h1 className="text-xl font-bold text-foreground mb-2">Interview In Progress</h1>
+            <p className="text-muted-foreground mb-6">
+              You have an interview session in progress. Resume where you left off.
+            </p>
+            <Button
+              variant="secondary"
+              className="text-yellow-500"
+              onClick={() => router.push(`/join/${token}/session/${info.sessionId}`)}
+            >
+              Resume Interview
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -130,35 +136,41 @@ export default function JoinPage({ params }: { params: Promise<{ token: string }
   // canJoin
   return (
     <div className="max-w-md mx-auto">
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur">
-        <h1 className="text-2xl font-bold text-white mb-1">{info.title}</h1>
-        <p className="text-gray-400 mb-4">{info.company}</p>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-8">
+          <h1 className="text-2xl font-bold text-foreground mb-1">{info.title}</h1>
+          <p className="text-muted-foreground mb-5">{info.company}</p>
 
-        {info.description && (
-          <p className="text-gray-300 text-sm mb-4 line-clamp-4">{info.description}</p>
-        )}
+          {info.description && (
+            <p className="text-sm text-foreground/80 mb-5 line-clamp-4 leading-relaxed">
+              {info.description}
+            </p>
+          )}
 
-        <div className="rounded-lg bg-white/5 px-4 py-3 mb-6">
-          <p className="text-sm text-gray-400">
-            <span className="text-white font-medium">{info.totalQuestions}</span> questions prepared
-          </p>
-        </div>
-
-        {error && (
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 mb-4">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="rounded-lg bg-muted px-4 py-3 mb-6">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{info.totalQuestions}</span> questions
+              prepared
+            </p>
           </div>
-        )}
 
-        <button
-          onClick={handleJoin}
-          disabled={joining}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-3 font-semibold text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {joining && <Loader2 size={18} className="animate-spin" />}
-          {joining ? "Joining..." : "Start Interview"}
-        </button>
-      </div>
+          {error && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 mb-4">
+              <p className="text-destructive text-sm">{error}</p>
+            </div>
+          )}
+
+          <Button size="lg" className="w-full" onClick={handleJoin} disabled={joining}>
+            {joining && <Loader2 className="h-4 w-4 animate-spin" />}
+            {joining ? "Joining..." : "Start Interview"}
+            {!joining && <ArrowRight className="h-4 w-4" />}
+          </Button>
+        </Card>
+      </motion.div>
     </div>
   );
 }
