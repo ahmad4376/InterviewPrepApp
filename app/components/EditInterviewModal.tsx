@@ -1,7 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/app/components/ui/dialog";
 
 interface EditInterviewModalProps {
   interview: { _id: string; title: string; company: string; description: string };
@@ -19,14 +29,6 @@ export default function EditInterviewModal({
   const [description, setDescription] = useState(interview.description);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,62 +56,51 @@ export default function EditInterviewModal({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="edit-modal-title"
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0c0c0c] p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 id="edit-modal-title" className="text-xl font-bold text-white">
-            Edit Interview
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white"
-          >
-            <X size={18} />
-          </button>
-        </div>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Interview</DialogTitle>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="edit-title" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="edit-title" className="block text-sm font-medium text-foreground mb-1">
               Job Title
             </label>
-            <input
+            <Input
               id="edit-title"
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
             />
           </div>
 
           <div>
-            <label htmlFor="edit-company" className="block text-sm font-medium text-gray-300 mb-1">
+            <label
+              htmlFor="edit-company"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
               Company
             </label>
-            <input
+            <Input
               id="edit-company"
               type="text"
               required
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
             />
           </div>
 
           <div>
             <label
               htmlFor="edit-description"
-              className="block text-sm font-medium text-gray-300 mb-1"
+              className="block text-sm font-medium text-foreground mb-1"
             >
               Job Description
             </label>
@@ -119,35 +110,29 @@ export default function EditInterviewModal({
               rows={5}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#3ecf8e] focus:outline-none focus:ring-1 focus:ring-[#3ecf8e] resize-none"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none transition-colors"
             />
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-400 transition hover:bg-white/10 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-5 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving && <Loader2 size={16} className="animate-spin" />}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

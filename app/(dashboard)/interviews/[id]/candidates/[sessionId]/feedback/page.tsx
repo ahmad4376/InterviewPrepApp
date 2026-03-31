@@ -5,9 +5,12 @@ import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
 import CandidateSession from "app/models/CandidateSession";
 import type { InterviewFeedback } from "app/models/Interview";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import FeedbackPageTabs from "app/components/FeedbackPageTabs";
+import DownloadReportButton from "app/components/DownloadReportButton";
 import type { TranscriptEntry } from "app/models/Interview";
+import { Button } from "@/app/components/ui/button";
+import { PageHeader } from "@/app/components/ui/page-header";
 
 export default async function CreatorCandidateFeedbackPage({
   params,
@@ -21,7 +24,6 @@ export default async function CreatorCandidateFeedbackPage({
 
   await connectDB();
 
-  // Verify creator owns this interview
   const interview = await Interview.findOne({ _id: id, userId }).lean();
   if (!interview) notFound();
 
@@ -36,32 +38,20 @@ export default async function CreatorCandidateFeedbackPage({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{session.candidateName as string}</h1>
-          <p className="text-gray-400 text-sm">
-            {session.candidateEmail as string} {session.candidateEmail ? "\u00B7 " : ""}
-            {new Date(session.createdAt as Date).toLocaleDateString()}
-          </p>
-        </div>
+      <PageHeader
+        title={session.candidateName as string}
+        description={`${session.candidateEmail as string}${session.candidateEmail ? " · " : ""}${new Date(session.createdAt as Date).toLocaleDateString()}`}
+      >
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/candidate-sessions/${sessionId}/report`}
-            target="_blank"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-          >
-            <Download size={16} />
-            Download PDF
-          </a>
-          <Link
-            href={`/interviews/${id}/candidates`}
-            className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </Link>
+          <DownloadReportButton reportUrl={`/api/candidate-sessions/${sessionId}/report`} />
+          <Button variant="secondary" size="sm" asChild>
+            <Link href={`/interviews/${id}/candidates`}>
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <FeedbackPageTabs
         feedback={feedback}

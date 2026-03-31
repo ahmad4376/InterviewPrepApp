@@ -58,6 +58,7 @@ export interface InterviewFeedback {
 
 export interface IInterview extends Document {
   userId: string;
+  organizationId: string | null;
   title: string;
   company: string;
   description: string;
@@ -97,6 +98,7 @@ const questionSchema = new Schema<IQuestion>(
 const interviewSchema = new Schema<IInterview>(
   {
     userId: { type: String, required: true, index: true },
+    organizationId: { type: String, default: null },
     title: { type: String, required: true },
     company: { type: String, required: true },
     description: { type: String, required: true },
@@ -138,6 +140,8 @@ const interviewSchema = new Schema<IInterview>(
 );
 
 interviewSchema.index({ userId: 1, createdAt: -1 });
+interviewSchema.index({ organizationId: 1, createdAt: -1 });
+interviewSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
 interviewSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
 
 const Interview =

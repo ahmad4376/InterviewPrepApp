@@ -8,6 +8,9 @@ import Interview from "app/models/Interview";
 import { ArrowLeft, Download, RefreshCw } from "lucide-react";
 import FeedbackPageTabs from "app/components/FeedbackPageTabs";
 import type { TranscriptEntry } from "app/models/Interview";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { PageHeader } from "@/app/components/ui/page-header";
 
 export default async function CandidateFeedbackPage({
   params,
@@ -33,63 +36,52 @@ export default async function CandidateFeedbackPage({
   if (!feedback) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Interview Feedback</h1>
-          <p className="text-gray-400 mb-1">Feedback is not yet available.</p>
-          <p className="text-gray-500 text-sm mb-6">
+        <Card className="p-10 text-center">
+          <h1 className="text-xl font-bold text-foreground mb-2">Interview Feedback</h1>
+          <p className="text-muted-foreground mb-1">Feedback is not yet available.</p>
+          <p className="text-sm text-muted-foreground/70 mb-6">
             Feedback typically takes 10-15 seconds to generate.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <a
-              href={`/join/${token}/feedback/${sessionId}`}
-              className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-            >
-              <RefreshCw size={14} />
-              Refresh
-            </a>
-            <Link
-              href={`/join/${token}`}
-              className="inline-flex items-center gap-2 text-sm text-gray-400 transition hover:text-white"
-            >
-              <ArrowLeft size={16} />
-              Back
-            </Link>
+            <Button variant="secondary" size="sm" asChild>
+              <a href={`/join/${token}/feedback/${sessionId}`}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </a>
+            </Button>
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+              <Link href={`/join/${token}`}>
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Link>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            {(interview?.title as string) || "Interview Feedback"}
-          </h1>
-          <p className="text-gray-400 text-sm">
-            {(interview?.company as string) || ""} {interview?.company ? "\u00B7 " : ""}
-            {new Date(session.createdAt as Date).toLocaleDateString()}
-          </p>
-        </div>
+      <PageHeader
+        title={(interview?.title as string) || "Interview Feedback"}
+        description={`${(interview?.company as string) || ""}${interview?.company ? " · " : ""}${new Date(session.createdAt as Date).toLocaleDateString()}`}
+      >
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/candidate-sessions/${sessionId}/report`}
-            target="_blank"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#3ecf8e] px-4 py-2 text-sm font-medium text-black transition hover:bg-[#33b87a]"
-          >
-            <Download size={16} />
-            Download PDF
-          </a>
-          <Link
-            href={`/join/${token}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </Link>
+          <Button asChild size="sm">
+            <a href={`/api/candidate-sessions/${sessionId}/report`} target="_blank">
+              <Download className="h-4 w-4" />
+              Download PDF
+            </a>
+          </Button>
+          <Button variant="secondary" size="sm" asChild>
+            <Link href={`/join/${token}`}>
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
+          </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <FeedbackPageTabs
         feedback={feedback}

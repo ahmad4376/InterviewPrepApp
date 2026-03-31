@@ -6,6 +6,10 @@ import Link from "next/link";
 import { Loader2, ArrowLeft, Play, Clock, AlertTriangle } from "lucide-react";
 import type { Problem } from "../../coding-interview/_lib/types";
 import CodingWorkspace from "../../coding-interview/_components/CodingWorkspace";
+import MobileGate from "app/components/MobileGate";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { cn } from "@/app/lib/cn";
 
 interface CodingInterviewData {
   _id: string;
@@ -42,7 +46,6 @@ export default function CodingSessionPage() {
       .then((data) => {
         if (data.error) throw new Error(data.error);
         setInterview(data);
-        // Calculate elapsed time if already started
         if (data.startedAt && data.status === "in-progress") {
           const startTime = new Date(data.startedAt).getTime();
           setElapsed(Math.floor((Date.now() - startTime) / 1000));
@@ -52,7 +55,6 @@ export default function CodingSessionPage() {
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  // Timer
   useEffect(() => {
     if (interview?.status !== "in-progress") return;
     timerRef.current = setInterval(() => {
@@ -63,7 +65,6 @@ export default function CodingSessionPage() {
     };
   }, [interview?.status]);
 
-  // Auto-complete on time limit
   useEffect(() => {
     if (
       interview?.status === "in-progress" &&
@@ -123,15 +124,15 @@ export default function CodingSessionPage() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-[#0b0b0b] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#3ecf8e]" />
+      <div className="h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!interview) {
     return (
-      <div className="h-screen bg-[#0b0b0b] flex items-center justify-center text-gray-400">
+      <div className="h-screen bg-background flex items-center justify-center text-muted-foreground">
         Interview not found.
       </div>
     );
@@ -140,32 +141,36 @@ export default function CodingSessionPage() {
   // Pre-start screen
   if (interview.status === "scheduled") {
     return (
-      <div className="h-screen bg-[#0b0b0b] flex items-center justify-center">
+      <div className="h-screen bg-background flex items-center justify-center">
         <div className="max-w-md w-full mx-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">{interview.title}</h1>
-            <p className="text-gray-400 mb-6">
+          <Card className="p-8 text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-2">{interview.title}</h1>
+            <p className="text-muted-foreground mb-6">
               {interview.numProblems} problems · {interview.difficulty}
               {interview.timeLimit ? ` · ${interview.timeLimit} min` : " · Untimed"}
             </p>
 
-            <button
+            <Button
               onClick={handleStart}
               disabled={starting}
-              className="w-full rounded-lg bg-[#3ecf8e] px-6 py-3 font-medium text-black transition hover:bg-[#33b87a] disabled:opacity-50 inline-flex items-center justify-center gap-2 mb-3"
+              size="lg"
+              className="w-full gap-2 mb-3"
             >
-              {starting ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
+              {starting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
               {starting ? "Starting..." : "Start Coding Interview"}
-            </button>
+            </Button>
 
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition"
-            >
-              <ArrowLeft size={14} />
-              Back to Dashboard
-            </Link>
-          </div>
+            <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground">
+              <Link href="/dashboard">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Link>
+            </Button>
+          </Card>
         </div>
       </div>
     );
@@ -185,74 +190,77 @@ export default function CodingSessionPage() {
   const submitted = interview.submissions.filter((s) => s.status !== "not_attempted").length;
 
   return (
-    <div className="h-screen flex flex-col bg-[#0b0b0b]">
-      {/* Session bar */}
-      <div className="border-b border-gray-800 bg-[#1a1a1a] px-4 py-2 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-white">{interview.title}</span>
-          <div className="h-4 w-px bg-gray-700" />
-          <span className="text-xs text-gray-400">
-            {submitted}/{interview.numProblems} submitted
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div
-            className={`flex items-center gap-1.5 text-sm font-mono ${
-              isLowTime ? "text-red-400" : "text-gray-300"
-            }`}
-          >
-            <Clock size={14} />
-            {timeRemaining !== null ? (
-              <>
-                {formatTime(timeRemaining)}
-                {isLowTime && <AlertTriangle size={14} className="text-red-400" />}
-              </>
-            ) : (
-              formatTime(elapsed)
-            )}
+    <MobileGate>
+      <div className="h-screen flex flex-col bg-background">
+        {/* Session bar */}
+        <div className="border-b border-border bg-card px-4 py-2 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-foreground">{interview.title}</span>
+            <div className="h-4 w-px bg-border" />
+            <span className="text-xs text-muted-foreground">
+              {submitted}/{interview.numProblems} submitted
+            </span>
           </div>
 
-          <button
-            onClick={() => setShowEndConfirm(true)}
-            disabled={ending}
-            className="rounded-lg bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
-          >
-            {ending ? "Ending..." : "End Interview"}
-          </button>
-        </div>
-      </div>
-
-      {/* End confirmation modal */}
-      {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold text-white mb-2">End Interview?</h3>
-            <p className="text-sm text-gray-400 mb-4">
-              {submitted}/{interview.numProblems} problems submitted. This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowEndConfirm(false)}
-                className="flex-1 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-              >
-                Continue Coding
-              </button>
-              <button
-                onClick={handleEnd}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
-              >
-                End Interview
-              </button>
+          <div className="flex items-center gap-4">
+            <div
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-mono",
+                isLowTime ? "text-destructive" : "text-foreground",
+              )}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              {timeRemaining !== null ? (
+                <>
+                  {formatTime(timeRemaining)}
+                  {isLowTime && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                </>
+              ) : (
+                formatTime(elapsed)
+              )}
             </div>
+
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowEndConfirm(true)}
+              disabled={ending}
+            >
+              {ending ? "Ending..." : "End Interview"}
+            </Button>
           </div>
         </div>
-      )}
 
-      {/* Workspace */}
-      <div className="flex-1 min-h-0">
-        <CodingWorkspace problems={interview.problemDetails} codingInterviewId={interview._id} />
+        {/* End confirmation modal */}
+        {showEndConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <Card className="p-6 max-w-sm w-full mx-4">
+              <h3 className="text-base font-semibold text-foreground mb-2">End Interview?</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                {submitted}/{interview.numProblems} problems submitted. This action cannot be
+                undone.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowEndConfirm(false)}
+                  className="flex-1"
+                >
+                  Continue Coding
+                </Button>
+                <Button variant="destructive" onClick={handleEnd} className="flex-1">
+                  End Interview
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Workspace */}
+        <div className="flex-1 min-h-0">
+          <CodingWorkspace problems={interview.problemDetails} codingInterviewId={interview._id} />
+        </div>
       </div>
-    </div>
+    </MobileGate>
   );
 }

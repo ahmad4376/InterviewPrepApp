@@ -262,14 +262,20 @@ Rules:
 
 /**
  * Generate HR screening questions via LLM.
- * These focus on communication, cultural fit, behavioral competencies, and soft skills.
+ * These focus on the specific areas selected by the user.
  */
 export async function generateHRQuestions(
   jobTitle: string,
   jobDescription: string,
   count: number = 10,
+  focusAreas?: string[],
 ): Promise<IPoolQuestion[]> {
   const openai = getClient();
+
+  const focusSection =
+    focusAreas && focusAreas.length > 0
+      ? `\n\nIMPORTANT: The interviewer has specifically selected these focus areas. You MUST heavily prioritize questions from these categories, distributing questions proportionally across them:\n${focusAreas.map((a) => `- ${a}`).join("\n")}`
+      : "";
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -292,18 +298,19 @@ Return JSON in this exact format:
   ]
 }
 
-HR Question Categories to cover:
-- Communication & Presentation: How clearly and confidently they express ideas
-- Cultural Fit: Alignment with company values and work style
-- Motivation & Career Goals: Why they want this role and their ambitions
-- Teamwork & Collaboration: Working with others, handling conflicts
-- Problem Solving & Adaptability: How they handle challenges and change
-- Leadership & Initiative: Taking ownership and leading others
-- Work Ethic & Reliability: Commitment, time management, accountability
-- Self-Awareness: Understanding their strengths and weaknesses
+Available HR Question Categories:
+- behavioral: Past behavior and experience-based questions (STAR method)
+- leadership: Taking ownership, leading others, decision-making
+- communication: How clearly and confidently they express ideas
+- teamwork: Working with others, collaboration, team dynamics
+- conflict: Conflict resolution, handling disagreements, difficult conversations
+- motivation: Why they want this role, career goals, drive
+- cultural_fit: Alignment with company values, work style, environment preferences
+- problem_solving: How they handle challenges, analytical thinking, creativity
+- adaptability: Handling change, learning from failure, flexibility${focusSection}
 
 Rules:
-- Each question MUST have 2-4 tags from the HR categories above (lowercase, e.g., "communication", "cultural-fit", "teamwork")
+- Each question MUST have 2-4 tags from the categories above (lowercase, e.g., "communication", "cultural_fit", "teamwork")
 - difficulty_score: 1=icebreaker, 2=background, 3=behavioral, 4=situational, 5=challenging scenario
 - Include a mix of difficulty levels
 - Questions should be open-ended and suitable for verbal interview
@@ -312,7 +319,7 @@ Rules:
       },
       {
         role: "user",
-        content: `Job Title: ${jobTitle}\n\nJob Description: ${jobDescription}`,
+        content: `Role: ${jobTitle}\n\nContext: ${jobDescription}`,
       },
     ],
   });
