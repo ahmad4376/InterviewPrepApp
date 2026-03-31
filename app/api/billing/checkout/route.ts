@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { getAuthUserId } from "app/lib/auth";
-import { stripe } from "app/lib/stripe";
+import { getStripe } from "app/lib/stripe";
 import { getUserWithTier } from "app/lib/subscription/gate";
 import { getStripePriceId } from "app/lib/subscription/tiers";
 import User from "app/models/User";
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const clerk = await currentUser();
     const email = clerk?.emailAddresses?.[0]?.emailAddress;
 
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: email ?? undefined,
       metadata: { clerkId: userId },
     });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   const origin = request.headers.get("origin") ?? "http://localhost:3000";
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],

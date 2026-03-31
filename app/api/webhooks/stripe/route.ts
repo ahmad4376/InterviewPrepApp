@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe } from "app/lib/stripe";
+import { getStripe } from "app/lib/stripe";
 import { connectDB } from "app/lib/mongodb";
 import { getTierFromPriceId } from "app/lib/subscription/tiers";
 import User from "app/models/User";
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Webhook signature verification failed:", message);
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       const clerkId = session.metadata?.clerkId;
       if (!clerkId || !session.subscription) break;
 
-      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+      const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
       const priceId = subscription.items.data[0]?.price.id;
       const tier = priceId ? getTierFromPriceId(priceId) : null;
       const period = getSubscriptionPeriod(subscription);

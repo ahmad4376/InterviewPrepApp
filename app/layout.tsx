@@ -15,6 +15,7 @@ const fira = localFont({
   src: "./fonts/FiraCode-Variable.woff2",
   variable: "--font-fira",
   display: "fallback",
+  adjustFontFallback: false,
 });
 
 export const metadata = {
