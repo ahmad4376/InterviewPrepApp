@@ -20,10 +20,12 @@ spec:
       labels:
         app: interview-prep
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: interview-prep
-          image: interview-prep-app:local
-          imagePullPolicy: Never
+          image: ghcr.io/IMAGE_PLACEHOLDER:TAG_PLACEHOLDER
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           resources:
@@ -68,3 +70,13 @@ spec:
                 secretKeyRef:
                   name: interview-prep-secrets
                   key: OPENAI_API_KEY
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: STRIPE_WEBHOOK_SECRET

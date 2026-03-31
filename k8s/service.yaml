@@ -4,7 +4,7 @@ metadata:
   name: interview-prep-service
   namespace: interview-prep
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: interview-prep
   ports:
