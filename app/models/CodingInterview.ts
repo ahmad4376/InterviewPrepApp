@@ -21,6 +21,8 @@ export interface ICodingInterview extends Document {
   status: "scheduled" | "in-progress" | "completed";
   problems: string[];
   submissions: ISubmissionEntry[];
+  isMassInterview: boolean;
+  shareToken: string | null;
   startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
@@ -64,6 +66,8 @@ const CodingInterviewSchema = new Schema<ICodingInterview>(
     },
     problems: { type: [String], default: [] },
     submissions: { type: [SubmissionEntrySchema], default: [] },
+    isMassInterview: { type: Boolean, default: false },
+    shareToken: { type: String, default: null },
     startedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
   },
@@ -72,6 +76,7 @@ const CodingInterviewSchema = new Schema<ICodingInterview>(
 
 CodingInterviewSchema.index({ userId: 1, createdAt: -1 });
 CodingInterviewSchema.index({ userId: 1, status: 1 });
+CodingInterviewSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
 
 const CodingInterview: Model<ICodingInterview> =
   (mongoose.models.CodingInterview as Model<ICodingInterview>) ||

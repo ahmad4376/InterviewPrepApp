@@ -26,6 +26,7 @@ import {
   Lightbulb,
   UserCheck,
   Flame,
+  ListChecks,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/app/components/ui/card";
@@ -168,6 +169,7 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
   const [numQuestions, setNumQuestions] = useState(5);
   const [jobLevel, setJobLevel] = useState("mid");
   const [isMassInterview, setIsMassInterview] = useState(false);
+  const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
@@ -185,6 +187,14 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
   };
 
   const handleSubmit = async () => {
+    if (useCustomQuestions) {
+      sessionStorage.setItem(
+        "customInterviewConfig",
+        JSON.stringify({ title, company, jobLevel, interviewType: "technical", isMassInterview }),
+      );
+      router.push("/create-interview/custom-questions");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -315,20 +325,22 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
             />
           </div>
 
-          <div>
-            <Label htmlFor="description">Job Description</Label>
-            <textarea
-              id="description"
-              required
-              rows={5}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Paste the job description here..."
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none transition-colors"
-            />
-          </div>
+          {!useCustomQuestions && (
+            <div>
+              <Label htmlFor="description">Job Description</Label>
+              <textarea
+                id="description"
+                required
+                rows={5}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Paste the job description here..."
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none transition-colors"
+              />
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={cn("grid gap-4", useCustomQuestions ? "grid-cols-1" : "grid-cols-2")}>
             <div>
               <Label htmlFor="jobLevel">Job Level</Label>
               <Select value={jobLevel} onValueChange={setJobLevel}>
@@ -344,36 +356,79 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="numQuestions">Questions</Label>
-              <Input
-                id="numQuestions"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                required
-                value={numQuestions === 0 ? "" : numQuestions}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "");
-                  setNumQuestions(v === "" ? 0 : Math.min(20, Number(v)));
-                }}
-                onBlur={() => {
-                  if (numQuestions < 1) setNumQuestions(1);
-                }}
-                placeholder="1-20"
-              />
-            </div>
+            {!useCustomQuestions && (
+              <div>
+                <Label htmlFor="numQuestions">Questions</Label>
+                <Input
+                  id="numQuestions"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  required
+                  value={numQuestions === 0 ? "" : numQuestions}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    setNumQuestions(v === "" ? 0 : Math.min(20, Number(v)));
+                  }}
+                  onBlur={() => {
+                    if (numQuestions < 1) setNumQuestions(1);
+                  }}
+                  placeholder="1-20"
+                />
+              </div>
+            )}
           </div>
 
           {isBusiness && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">Mass Interview</p>
-                <p className="text-xs text-muted-foreground">
-                  Share a link for multiple candidates
-                </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Mass Interview</p>
+                  <p className="text-xs text-muted-foreground">
+                    Share a link for multiple candidates
+                  </p>
+                </div>
+                <Switch
+                  checked={isMassInterview}
+                  onCheckedChange={(v) => {
+                    setIsMassInterview(v);
+                    if (!v) setUseCustomQuestions(false);
+                  }}
+                />
               </div>
-              <Switch checked={isMassInterview} onCheckedChange={setIsMassInterview} />
+
+              {isMassInterview && (
+                <button
+                  type="button"
+                  onClick={() => setUseCustomQuestions((v) => !v)}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                    useCustomQuestions
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
+                  )}
+                >
+                  <ListChecks
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      useCustomQuestions ? "text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                  <div>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        useCustomQuestions ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      Use Custom Questions
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Write your own questions with sample answers and scoring rubrics
+                    </p>
+                  </div>
+                </button>
+              )}
             </div>
           )}
 
@@ -385,7 +440,7 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
 
           <Button
             type="button"
-            disabled={loading || !title || !company || !description}
+            disabled={loading || !title || !company || (!useCustomQuestions && !description)}
             onClick={handleSubmit}
             size="lg"
             className="w-full gap-2"
@@ -394,6 +449,11 @@ function TechnicalInterviewForm({ onBack }: { onBack: () => void }) {
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Generating Questions...
+              </>
+            ) : useCustomQuestions ? (
+              <>
+                <ListChecks className="h-4 w-4" />
+                Continue to Custom Questions
               </>
             ) : (
               <>
@@ -426,6 +486,7 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
   const [numQuestions, setNumQuestions] = useState(5);
   const [jobLevel, setJobLevel] = useState("mid");
   const [isMassInterview, setIsMassInterview] = useState(false);
+  const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -439,6 +500,20 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
   };
 
   const handleSubmit = async () => {
+    if (useCustomQuestions) {
+      sessionStorage.setItem(
+        "customInterviewConfig",
+        JSON.stringify({
+          title: role || "HR Interview",
+          company: company || "Company",
+          jobLevel,
+          interviewType: "hr",
+          isMassInterview,
+        }),
+      );
+      router.push("/create-interview/custom-questions");
+      return;
+    }
     if (focusAreas.size === 0) {
       setError("Select at least one focus area");
       return;
@@ -553,7 +628,7 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={cn("grid gap-4", useCustomQuestions ? "grid-cols-1" : "grid-cols-2")}>
             <div>
               <Label htmlFor="hr-level">Job Level</Label>
               <Select value={jobLevel} onValueChange={setJobLevel}>
@@ -569,36 +644,79 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="hr-questions">Questions</Label>
-              <Input
-                id="hr-questions"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                required
-                value={numQuestions === 0 ? "" : numQuestions}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "");
-                  setNumQuestions(v === "" ? 0 : Math.min(20, Number(v)));
-                }}
-                onBlur={() => {
-                  if (numQuestions < 1) setNumQuestions(1);
-                }}
-                placeholder="1-20"
-              />
-            </div>
+            {!useCustomQuestions && (
+              <div>
+                <Label htmlFor="hr-questions">Questions</Label>
+                <Input
+                  id="hr-questions"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  required
+                  value={numQuestions === 0 ? "" : numQuestions}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    setNumQuestions(v === "" ? 0 : Math.min(20, Number(v)));
+                  }}
+                  onBlur={() => {
+                    if (numQuestions < 1) setNumQuestions(1);
+                  }}
+                  placeholder="1-20"
+                />
+              </div>
+            )}
           </div>
 
           {isBusiness && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">Mass Interview</p>
-                <p className="text-xs text-muted-foreground">
-                  Share a link for multiple candidates
-                </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Mass Interview</p>
+                  <p className="text-xs text-muted-foreground">
+                    Share a link for multiple candidates
+                  </p>
+                </div>
+                <Switch
+                  checked={isMassInterview}
+                  onCheckedChange={(v) => {
+                    setIsMassInterview(v);
+                    if (!v) setUseCustomQuestions(false);
+                  }}
+                />
               </div>
-              <Switch checked={isMassInterview} onCheckedChange={setIsMassInterview} />
+
+              {isMassInterview && (
+                <button
+                  type="button"
+                  onClick={() => setUseCustomQuestions((v) => !v)}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                    useCustomQuestions
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
+                  )}
+                >
+                  <ListChecks
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      useCustomQuestions ? "text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                  <div>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        useCustomQuestions ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      Use Custom Questions
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Write your own questions with sample answers and scoring rubrics
+                    </p>
+                  </div>
+                </button>
+              )}
             </div>
           )}
 
@@ -610,7 +728,7 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
 
           <Button
             type="button"
-            disabled={loading || focusAreas.size === 0}
+            disabled={loading || (!useCustomQuestions && focusAreas.size === 0)}
             onClick={handleSubmit}
             size="lg"
             className="w-full gap-2"
@@ -619,6 +737,11 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Generating Questions...
+              </>
+            ) : useCustomQuestions ? (
+              <>
+                <ListChecks className="h-4 w-4" />
+                Continue to Custom Questions
               </>
             ) : (
               <>
@@ -642,16 +765,31 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
 
 function CodingInterviewForm({ onBack }: { onBack: () => void }) {
   const router = useRouter();
+  const { isBusiness } = useSubscription();
   const [codingTitle, setCodingTitle] = useState("Coding Practice");
   const [codingDifficulty, setCodingDifficulty] = useState<"easy" | "medium" | "hard" | "mixed">(
     "mixed",
   );
   const [codingNumProblems, setCodingNumProblems] = useState(5);
   const [codingTimeLimit, setCodingTimeLimit] = useState<number | null>(60);
+  const [isMassInterview, setIsMassInterview] = useState(false);
+  const [usePickQuestions, setUsePickQuestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
+    if (usePickQuestions) {
+      sessionStorage.setItem(
+        "codingMassConfig",
+        JSON.stringify({
+          title: codingTitle,
+          timeLimit: codingTimeLimit,
+          isMassInterview,
+        }),
+      );
+      router.push("/create-interview/pick-questions");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -663,6 +801,7 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
           difficulty: codingDifficulty,
           numProblems: codingNumProblems,
           timeLimit: codingTimeLimit,
+          isMassInterview,
         }),
       });
       if (!res.ok) {
@@ -712,43 +851,45 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="codingDifficulty">Difficulty</Label>
-              <Select
-                value={codingDifficulty}
-                onValueChange={(v) =>
-                  setCodingDifficulty(v as "easy" | "medium" | "hard" | "mixed")
-                }
-              >
-                <SelectTrigger id="codingDifficulty">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
+          {!usePickQuestions && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="codingDifficulty">Difficulty</Label>
+                <Select
+                  value={codingDifficulty}
+                  onValueChange={(v) =>
+                    setCodingDifficulty(v as "easy" | "medium" | "hard" | "mixed")
+                  }
+                >
+                  <SelectTrigger id="codingDifficulty">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                    <SelectItem value="mixed">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="codingNumProblems">Problems</Label>
+                <Select
+                  value={String(codingNumProblems)}
+                  onValueChange={(v) => setCodingNumProblems(parseInt(v))}
+                >
+                  <SelectTrigger id="codingNumProblems">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 problems</SelectItem>
+                    <SelectItem value="5">5 problems</SelectItem>
+                    <SelectItem value="10">10 problems</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="codingNumProblems">Problems</Label>
-              <Select
-                value={String(codingNumProblems)}
-                onValueChange={(v) => setCodingNumProblems(parseInt(v))}
-              >
-                <SelectTrigger id="codingNumProblems">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3">3 problems</SelectItem>
-                  <SelectItem value="5">5 problems</SelectItem>
-                  <SelectItem value="10">10 problems</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
 
           <div>
             <Label htmlFor="codingTimeLimit">Time Limit</Label>
@@ -768,6 +909,59 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
             </Select>
           </div>
 
+          {isBusiness && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Mass Interview</p>
+                  <p className="text-xs text-muted-foreground">
+                    Share a link for multiple candidates
+                  </p>
+                </div>
+                <Switch
+                  checked={isMassInterview}
+                  onCheckedChange={(v) => {
+                    setIsMassInterview(v);
+                    if (!v) setUsePickQuestions(false);
+                  }}
+                />
+              </div>
+
+              {isMassInterview && (
+                <button
+                  type="button"
+                  onClick={() => setUsePickQuestions((v) => !v)}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                    usePickQuestions
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
+                  )}
+                >
+                  <ListChecks
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      usePickQuestions ? "text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                  <div>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        usePickQuestions ? "text-primary" : "text-foreground",
+                      )}
+                    >
+                      Pick Questions Manually
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Choose specific problems from our library
+                    </p>
+                  </div>
+                </button>
+              )}
+            </div>
+          )}
+
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
               <p className="text-destructive text-sm">{error}</p>
@@ -785,6 +979,11 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Creating...
+              </>
+            ) : usePickQuestions ? (
+              <>
+                <ListChecks className="h-4 w-4" />
+                Continue to Pick Questions
               </>
             ) : (
               <>
