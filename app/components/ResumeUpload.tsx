@@ -138,10 +138,10 @@ export default function ResumeUpload({ onResumeData, disabled }: ResumeUploadPro
 
   return (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-300 mb-1">
-        Resume / CV <span className="text-gray-500">(optional)</span>
+      <label className="block text-sm font-medium text-foreground mb-1">
+        Resume / CV <span className="text-muted-foreground">(optional)</span>
       </label>
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-xs text-muted-foreground mb-3">
         Upload a resume to personalize interview questions based on the candidate&apos;s background.
       </p>
 
@@ -152,10 +152,10 @@ export default function ResumeUpload({ onResumeData, disabled }: ResumeUploadPro
         onDragLeave={handleDragLeave}
         className={`
           relative rounded-xl border-2 border-dashed p-6 text-center transition cursor-pointer
-          ${isDragging ? "border-[#3ecf8e] bg-[#3ecf8e]/10" : "border-white/20 bg-white/5 hover:border-white/40"}
+          ${isDragging ? "border-accent bg-accent/10" : "border-border bg-card hover:border-border/60"}
           ${disabled || parsing ? "opacity-50 cursor-not-allowed" : ""}
-          ${parsedData ? "border-[#3ecf8e]/50 bg-[#3ecf8e]/5" : ""}
-          ${error ? "border-red-500/50 bg-red-500/5" : ""}
+          ${parsedData ? "border-accent/50 bg-accent/5" : ""}
+          ${error ? "border-destructive/50 bg-destructive/5" : ""}
         `}
       >
         <input
@@ -169,27 +169,27 @@ export default function ResumeUpload({ onResumeData, disabled }: ResumeUploadPro
 
         {parsing ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 size={32} className="text-[#3ecf8e] animate-spin" />
-            <p className="text-sm text-gray-400">Parsing resume...</p>
+            <Loader2 size={32} className="text-accent animate-spin" />
+            <p className="text-sm text-muted-foreground">Parsing resume...</p>
           </div>
         ) : parsedData ? (
           <div className="flex flex-col items-center gap-2">
-            <CheckCircle size={32} className="text-[#3ecf8e]" />
+            <CheckCircle size={32} className="text-accent" />
             <div className="flex items-center gap-2">
-              <FileText size={16} className="text-[#3ecf8e]" />
-              <span className="text-sm text-white">{file?.name}</span>
+              <FileText size={16} className="text-accent" />
+              <span className="text-sm text-foreground">{file?.name}</span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleClear();
                 }}
-                className="ml-2 rounded-full p-1 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                className="ml-2 rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <X size={14} />
               </button>
             </div>
-            <p className="text-xs text-[#3ecf8e]">
+            <p className="text-xs text-accent">
               Parsed: {parsedData.name}
               {parsedData.skills.length > 0 && ` • ${parsedData.skills.length} skills`}
               {parsedData.experience.length > 0 && ` • ${parsedData.experience.length} positions`}
@@ -197,37 +197,37 @@ export default function ResumeUpload({ onResumeData, disabled }: ResumeUploadPro
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Upload size={32} className={isDragging ? "text-[#3ecf8e]" : "text-gray-400"} />
-            <p className="text-sm text-gray-400">
-              <span className="text-[#3ecf8e] font-medium">Click to upload</span> or drag and drop
+            <Upload size={32} className={isDragging ? "text-accent" : "text-muted-foreground"} />
+            <p className="text-sm text-muted-foreground">
+              <span className="text-accent font-medium">Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-gray-500">PDF or DOCX (max 5MB)</p>
+            <p className="text-xs text-muted-foreground">PDF or DOCX (max 5MB)</p>
           </div>
         )}
       </div>
 
-      {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
       {parsedData && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4">
-          <h4 className="text-sm font-medium text-white mb-2">Extracted Information</h4>
-          <div className="space-y-2 text-xs text-gray-400">
+        <div className="mt-4 rounded-lg border border-border bg-card p-4">
+          <h4 className="text-sm font-medium text-foreground mb-2">Extracted Information</h4>
+          <div className="space-y-2 text-xs text-muted-foreground">
             {parsedData.skills.length > 0 && (
               <div>
-                <span className="text-gray-300">Skills: </span>
+                <span className="text-foreground/80">Skills: </span>
                 {parsedData.skills.slice(0, 8).join(", ")}
                 {parsedData.skills.length > 8 && ` +${parsedData.skills.length - 8} more`}
               </div>
             )}
             {parsedData.experience.length > 0 && parsedData.experience[0] && (
               <div>
-                <span className="text-gray-300">Latest Role: </span>
+                <span className="text-foreground/80">Latest Role: </span>
                 {parsedData.experience[0].title} at {parsedData.experience[0].company}
               </div>
             )}
             {parsedData.projects.length > 0 && (
               <div>
-                <span className="text-gray-300">Projects: </span>
+                <span className="text-foreground/80">Projects: </span>
                 {parsedData.projects.length} listed
               </div>
             )}

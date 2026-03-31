@@ -21,8 +21,8 @@ export default function ResultTab({
   if (isRunning || isSubmitting) {
     return (
       <div className="flex items-center justify-center h-full gap-2">
-        <Loader2 className="w-5 h-5 animate-spin text-[#3ecf8e]" />
-        <span className="text-sm text-gray-400">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">
           {isSubmitting ? "Submitting..." : "Running..."}
         </span>
       </div>
@@ -31,7 +31,7 @@ export default function ResultTab({
 
   if (testResults.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-500">
+      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
         Run your code to see results.
       </div>
     );
@@ -49,7 +49,7 @@ export default function ResultTab({
           {testResults.filter((r) => r.passed).length}/{testResults.length} visible passed
         </span>
         {lastAction === "submit" && hiddenResults && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-muted-foreground">
             Hidden:{" "}
             <span
               className={
@@ -94,27 +94,27 @@ export default function ResultTab({
                     : "Wrong Answer"}
               </span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
               {result.time}
             </div>
           </div>
 
-          <div className="bg-gray-900/50 p-3 space-y-1.5">
+          <div className="bg-muted/30 p-3 space-y-1.5">
             <div className="flex gap-2 items-start">
-              <span className="text-xs text-gray-500 w-16 shrink-0">Input:</span>
-              <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Input:</span>
+              <pre className="text-xs text-foreground/80 font-mono whitespace-pre-wrap">
                 {result.input}
               </pre>
             </div>
             <div className="flex gap-2 items-start">
-              <span className="text-xs text-gray-500 w-16 shrink-0">Expected:</span>
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Expected:</span>
               <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
                 {result.expected}
               </pre>
             </div>
             <div className="flex gap-2 items-start">
-              <span className="text-xs text-gray-500 w-16 shrink-0">Output:</span>
+              <span className="text-xs text-muted-foreground w-16 shrink-0">Output:</span>
               <pre
                 className={`text-xs font-mono whitespace-pre-wrap ${
                   result.passed ? "text-green-400" : "text-red-400"
@@ -144,8 +144,8 @@ export default function ResultTab({
               Hidden Test Case — Wrong Answer
             </span>
           </div>
-          <div className="bg-gray-900/50 p-3">
-            <p className="text-xs text-gray-500 italic">
+          <div className="bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground italic">
               {hiddenResults.total - hiddenResults.passed} hidden test(s) failed.
             </p>
           </div>

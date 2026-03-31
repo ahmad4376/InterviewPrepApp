@@ -13,9 +13,9 @@ interface PipelineChartProps {
 }
 
 const STATUS_CONFIG = [
-  { key: "scheduled", label: "Scheduled", color: "#6b7280" },
-  { key: "in-progress", label: "In Progress", color: "#f59e0b" },
-  { key: "completed", label: "Completed", color: "#3ecf8e" },
+  { key: "scheduled", label: "Scheduled", color: "hsl(240 5% 64.9%)" },
+  { key: "in-progress", label: "In Progress", color: "hsl(38 92% 50%)" },
+  { key: "completed", label: "Completed", color: "hsl(160 60% 52%)" },
 ] as const;
 
 export default function PipelineChart({ data }: PipelineChartProps) {
@@ -27,7 +27,7 @@ export default function PipelineChart({ data }: PipelineChartProps) {
 
   if (chartData.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
         No interview data yet
       </div>
     );
@@ -51,13 +51,13 @@ export default function PipelineChart({ data }: PipelineChartProps) {
         </Pie>
         <Tooltip
           contentStyle={{
-            backgroundColor: "#111",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: "hsl(240 8% 5.5%)",
+            border: "1px solid hsl(240 6% 12%)",
             borderRadius: "8px",
-            color: "#fff",
+            color: "hsl(0 0% 98%)",
           }}
         />
-        <Legend wrapperStyle={{ color: "#9ca3af", fontSize: 12 }} />
+        <Legend wrapperStyle={{ color: "hsl(240 5% 64.9%)", fontSize: 12 }} />
       </PieChart>
     </ResponsiveContainer>
   );

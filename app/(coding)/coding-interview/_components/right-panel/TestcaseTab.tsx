@@ -11,7 +11,7 @@ export default function TestcaseTab({ examples }: TestcaseTabProps) {
   const [activeCase, setActiveCase] = useState(0);
 
   if (examples.length === 0) {
-    return <div className="p-4 text-sm text-gray-500">No test cases available.</div>;
+    return <div className="p-4 text-sm text-muted-foreground">No test cases available.</div>;
   }
 
   const current = examples[activeCase] ?? examples[0];
@@ -25,7 +25,9 @@ export default function TestcaseTab({ examples }: TestcaseTabProps) {
             key={idx}
             onClick={() => setActiveCase(idx)}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              activeCase === idx ? "bg-gray-700 text-white" : "text-gray-500 hover:text-gray-300"
+              activeCase === idx
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Case {idx + 1}
@@ -38,14 +40,14 @@ export default function TestcaseTab({ examples }: TestcaseTabProps) {
         {current && (
           <div className="space-y-2">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Input</p>
-              <pre className="text-xs text-gray-300 font-mono bg-gray-800/60 rounded-lg p-3 whitespace-pre-wrap">
+              <p className="text-xs text-muted-foreground mb-1">Input</p>
+              <pre className="text-xs text-foreground/80 font-mono bg-muted/40 rounded-lg p-3 whitespace-pre-wrap">
                 {current.input || "(empty)"}
               </pre>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Expected Output</p>
-              <pre className="text-xs text-gray-300 font-mono bg-gray-800/60 rounded-lg p-3 whitespace-pre-wrap">
+              <p className="text-xs text-muted-foreground mb-1">Expected Output</p>
+              <pre className="text-xs text-foreground/80 font-mono bg-muted/40 rounded-lg p-3 whitespace-pre-wrap">
                 {current.output || "(empty)"}
               </pre>
             </div>

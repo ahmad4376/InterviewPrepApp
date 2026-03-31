@@ -23,7 +23,7 @@ interface VolumeChartProps {
 export default function VolumeChart({ data }: VolumeChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
         No interview data yet
       </div>
     );
@@ -34,37 +34,37 @@ export default function VolumeChart({ data }: VolumeChartProps) {
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3ecf8e" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#3ecf8e" stopOpacity={0} />
+            <stop offset="5%" stopColor="hsl(160 60% 52%)" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="hsl(160 60% 52%)" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+            <stop offset="5%" stopColor="hsl(263 55% 70%)" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="hsl(263 55% 70%)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 6% 12%)" />
         <XAxis
           dataKey="date"
-          stroke="#6b7280"
+          stroke="hsl(240 5% 64.9%)"
           fontSize={12}
           tickFormatter={(v) =>
             new Date(v).toLocaleDateString("en", { month: "short", day: "numeric" })
           }
         />
-        <YAxis stroke="#6b7280" fontSize={12} allowDecimals={false} />
+        <YAxis stroke="hsl(240 5% 64.9%)" fontSize={12} allowDecimals={false} />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#111",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: "hsl(240 8% 5.5%)",
+            border: "1px solid hsl(240 6% 12%)",
             borderRadius: "8px",
-            color: "#fff",
+            color: "hsl(0 0% 98%)",
           }}
         />
         <Area
           type="monotone"
           dataKey="count"
           name="Total"
-          stroke="#3ecf8e"
+          stroke="hsl(160 60% 52%)"
           fill="url(#colorTotal)"
           strokeWidth={2}
         />
@@ -72,7 +72,7 @@ export default function VolumeChart({ data }: VolumeChartProps) {
           type="monotone"
           dataKey="completed"
           name="Completed"
-          stroke="#8b5cf6"
+          stroke="hsl(263 55% 70%)"
           fill="url(#colorCompleted)"
           strokeWidth={2}
         />

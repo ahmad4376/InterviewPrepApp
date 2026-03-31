@@ -28,15 +28,15 @@ export default function ConsolePanel({
   lastAction,
 }: ConsolePanelProps) {
   return (
-    <div className="h-full flex flex-col bg-[#0f0f0f]">
+    <div className="h-full flex flex-col bg-background">
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 flex-shrink-0">
+      <div className="flex border-b border-border flex-shrink-0">
         <button
           onClick={() => onTabChange("testcase")}
           className={`px-4 py-1.5 text-xs font-medium transition-colors ${
             activeTab === "testcase"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "text-foreground border-b-2 border-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Testcase
@@ -45,8 +45,8 @@ export default function ConsolePanel({
           onClick={() => onTabChange("result")}
           className={`px-4 py-1.5 text-xs font-medium transition-colors ${
             activeTab === "result"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "text-foreground border-b-2 border-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Result

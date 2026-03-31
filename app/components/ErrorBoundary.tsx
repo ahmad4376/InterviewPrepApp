@@ -33,21 +33,21 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-6 max-w-md">
-            <h2 className="text-lg font-semibold text-red-400 mb-2">Something went wrong</h2>
-            <p className="text-gray-400 text-sm mb-4">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-6 max-w-md">
+            <h2 className="text-lg font-semibold text-destructive mb-2">Something went wrong</h2>
+            <p className="text-muted-foreground text-sm mb-4">
               This section encountered an error. The rest of the app should still work.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => this.setState({ hasError: false })}
-                className="rounded-md bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 transition-colors"
+                className="rounded-md bg-muted px-4 py-2 text-sm text-foreground hover:bg-muted/80 transition-colors"
               >
                 Try again
               </button>
               <a
                 href="/dashboard"
-                className="rounded-md bg-white/5 px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="rounded-md bg-card px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 Go to Dashboard
               </a>

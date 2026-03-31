@@ -17,8 +17,11 @@ import InterviewTranscript from "app/components/InterviewTranscript";
 import { selectNextQuestion } from "app/lib/sampling";
 import type { AdaptiveState, LlmAnalysis } from "app/lib/types";
 import { toast } from "sonner";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft, Clock, Mic, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { cn } from "@/app/lib/cn";
 
 /** Syncs VoiceBot messages to a ref so the outer component can access the transcript */
 function TranscriptCollector({
@@ -237,18 +240,20 @@ export default function InterviewSession({
 
   if (initialStatus === "completed") {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Interview Completed</h1>
-          <p className="text-gray-400 mb-6">This interview has already been completed.</p>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </Link>
-        </div>
+      <div className="mx-auto max-w-md">
+        <Card className="p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
+            <CheckCircle2 className="h-7 w-7 text-accent" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Interview Completed</h1>
+          <p className="text-muted-foreground mb-6">This interview has already been completed.</p>
+          <Button asChild variant="secondary" className="gap-2">
+            <Link href="/dashboard">
+              <ArrowLeft size={16} />
+              Back to Dashboard
+            </Link>
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -257,43 +262,43 @@ export default function InterviewSession({
 
   if (!started) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        <div className="max-w-md w-full rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur text-center">
-          <h1 className="text-2xl font-bold text-white mb-1">{title}</h1>
-          <p className="text-gray-400 mb-6">{company}</p>
-          <p className="text-gray-300 text-sm mb-8">
-            {displayQuestionCount} question
-            {displayQuestionCount !== 1 ? "s" : ""} prepared. Your browser will ask for microphone
-            access once you start.
-          </p>
-          <button
-            onClick={() => setStarted(true)}
-            className="rounded-lg bg-green-600 px-8 py-3 text-base font-semibold text-white transition hover:bg-green-500"
-          >
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5">
+        <Card className="max-w-md w-full p-8 text-center">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Mic className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-1">{title}</h1>
+          <p className="text-muted-foreground mb-5">{company}</p>
+          <div className="mb-7 rounded-lg bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            {displayQuestionCount} question{displayQuestionCount !== 1 ? "s" : ""} prepared &mdash;
+            your browser will ask for microphone access when you start.
+          </div>
+          <Button onClick={() => setStarted(true)} size="lg" className="w-full gap-2">
+            <Mic className="h-4 w-4" />
             Start Interview
-          </button>
-        </div>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 transition hover:text-white"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
+          </Button>
+        </Card>
+        <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+          <Link href="/dashboard">
+            <ArrowLeft size={15} />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-3xl mx-auto pb-8">
+      {/* Header */}
       <div className="text-center">
-        <h1 className="text-xl font-bold text-white">{title}</h1>
-        <p className="text-gray-400 text-sm">{company}</p>
+        <h1 className="text-xl font-bold text-foreground">{title}</h1>
+        <p className="text-muted-foreground text-sm">{company}</p>
       </div>
 
       {/* Progress bar + timer */}
       <div className="w-full">
-        <div className="flex justify-between items-center text-xs text-gray-400 mb-1.5">
+        <div className="flex justify-between items-center text-xs text-muted-foreground mb-1.5">
           <span>
             Question {questionsAsked} of {displayQuestionCount}
           </span>
@@ -302,12 +307,10 @@ export default function InterviewSession({
             {formatTime(elapsedSeconds)}
           </span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-white/10">
+        <div className="h-1.5 w-full rounded-full bg-muted">
           <div
-            className="h-1.5 rounded-full bg-[#3ecf8e] transition-all duration-500"
-            style={{
-              width: `${(questionsAsked / displayQuestionCount) * 100}%`,
-            }}
+            className="h-1.5 rounded-full bg-primary transition-all duration-500"
+            style={{ width: `${(questionsAsked / displayQuestionCount) * 100}%` }}
           />
         </div>
       </div>
@@ -330,34 +333,28 @@ export default function InterviewSession({
 
       {/* End interview — with confirmation */}
       {!showEndConfirm ? (
-        <button
+        <Button
+          variant="outline"
           onClick={() => setShowEndConfirm(true)}
           disabled={ending}
-          className="rounded-lg border border-red-500/30 bg-red-500/10 px-6 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           End Interview
-        </button>
+        </Button>
       ) : (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center w-full max-w-md">
-          <p className="text-sm text-gray-300 mb-3">
-            Are you sure? This will end the interview and generate feedback.
+        <Card className={cn("p-5 text-center w-full max-w-md border-destructive/20")}>
+          <p className="text-sm text-muted-foreground mb-4">
+            Are you sure? This will end the interview and generate your feedback report.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => setShowEndConfirm(false)}
-              className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-            >
+            <Button variant="secondary" onClick={() => setShowEndConfirm(false)}>
               Cancel
-            </button>
-            <button
-              onClick={handleEndInterview}
-              disabled={ending}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button variant="destructive" onClick={handleEndInterview} disabled={ending}>
               {ending ? "Generating feedback..." : "End & Generate Feedback"}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

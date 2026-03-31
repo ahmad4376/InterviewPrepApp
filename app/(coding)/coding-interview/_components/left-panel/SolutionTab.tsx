@@ -14,7 +14,7 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
 
   if (!hasSolution) {
     return (
-      <div className="text-gray-400 text-center py-12">
+      <div className="text-muted-foreground text-center py-12">
         <p>No solution available for this problem.</p>
       </div>
     );
@@ -22,7 +22,7 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 bg-gray-800/50 border border-gray-700 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-muted/40 border border-border rounded-lg p-1 w-fit">
         {(["python", "cpp", "javascript"] as const).map((lang) => (
           <button
             key={lang}
@@ -30,10 +30,10 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
             disabled={!problem.solutions?.[lang]}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               solutionLang === lang
-                ? "bg-[#3ecf8e] text-black"
+                ? "bg-primary text-primary-foreground"
                 : problem.solutions?.[lang]
-                  ? "text-gray-400 hover:text-gray-200"
-                  : "text-gray-600 cursor-not-allowed"
+                  ? "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground/40 cursor-not-allowed"
             }`}
           >
             {lang === "cpp" ? "C++" : lang === "javascript" ? "JavaScript" : "Python"}
@@ -41,9 +41,9 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
         ))}
       </div>
 
-      <div className="rounded-lg bg-gray-900 border border-gray-700 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50">
-          <span className="text-xs text-gray-400 font-mono">
+      <div className="rounded-lg bg-[#0d1117] border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
+          <span className="text-xs text-muted-foreground font-mono">
             {solutionLang === "cpp"
               ? "C++"
               : solutionLang === "javascript"
@@ -52,12 +52,12 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
           </span>
           <button
             onClick={() => navigator.clipboard.writeText(problem.solutions?.[solutionLang] ?? "")}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Copy
           </button>
         </div>
-        <pre className="text-xs text-gray-300 font-mono p-4 overflow-x-auto overflow-y-auto max-h-[60vh] whitespace-pre leading-relaxed">
+        <pre className="text-xs text-foreground/80 font-mono p-4 overflow-x-auto overflow-y-auto max-h-[60vh] whitespace-pre leading-relaxed">
           {problem.solutions?.[solutionLang] || "No solution available for this language."}
         </pre>
       </div>

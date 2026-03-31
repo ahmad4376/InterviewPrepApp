@@ -35,17 +35,17 @@ export default function LeftPanel({
   code,
 }: LeftPanelProps) {
   return (
-    <div className="h-full flex flex-col bg-[#0f0f0f]">
+    <div className="h-full flex flex-col bg-background">
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 flex-shrink-0">
+      <div className="flex border-b border-border flex-shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? "text-[#3ecf8e] border-b-2 border-[#3ecf8e]"
-                : "text-gray-400 hover:text-gray-300"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {tab.label}

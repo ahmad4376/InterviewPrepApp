@@ -26,7 +26,27 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "hsl(263, 70%, 50%)",
+          colorBackground: "hsl(var(--card))",
+          colorInputBackground: "hsl(var(--input))",
+          colorText: "hsl(var(--foreground))",
+          colorTextSecondary: "hsl(var(--muted-foreground))",
+          borderRadius: "0.6rem",
+        },
+        elements: {
+          card: "bg-card border border-border shadow-lg",
+          headerTitle: "text-foreground",
+          headerSubtitle: "text-muted-foreground",
+          socialButtonsBlockButton: "border-border bg-card text-foreground hover:bg-muted",
+          formFieldInput: "bg-background border-input text-foreground",
+          formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90",
+          footerActionLink: "text-primary hover:text-primary/80",
+        },
+      }}
+    >
       <html
         lang="en"
         className={`${inter.variable} ${fira.variable} font-inter`}

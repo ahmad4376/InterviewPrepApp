@@ -21,11 +21,11 @@ export default function SubmissionsTab({
   if (testResults.length === 0 || lastAction === "run") {
     return (
       <div className="text-center py-12">
-        <div className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center mx-auto mb-3">
-          <Play className="w-5 h-5 text-gray-500" />
+        <div className="w-12 h-12 rounded-full bg-muted border border-border flex items-center justify-center mx-auto mb-3">
+          <Play className="w-5 h-5 text-muted-foreground" />
         </div>
-        <p className="text-sm text-gray-500">No submissions yet.</p>
-        <p className="text-xs text-gray-600 mt-1">Click Submit to evaluate your code.</p>
+        <p className="text-sm text-muted-foreground">No submissions yet.</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Click Submit to evaluate your code.</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function SubmissionsTab({
           <p className={`text-sm font-semibold ${allPassed ? "text-green-400" : "text-red-400"}`}>
             {allPassed ? "Accepted" : "Wrong Answer"}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {totalPassed} / {totalCases} test cases passed
           </p>
         </div>
@@ -63,41 +63,41 @@ export default function SubmissionsTab({
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Runtime</p>
-          <p className="text-lg font-bold text-white">{testResults[0]?.time ?? "N/A"}</p>
+        <div className="bg-muted/40 border border-border rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Runtime</p>
+          <p className="text-lg font-bold text-foreground">{testResults[0]?.time ?? "N/A"}</p>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Test Cases</p>
-          <p className="text-lg font-bold text-white">
+        <div className="bg-muted/40 border border-border rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Test Cases</p>
+          <p className="text-lg font-bold text-foreground">
             {totalPassed}/{totalCases}
           </p>
-          <p className="text-xs text-gray-600">passed</p>
+          <p className="text-xs text-muted-foreground/60">passed</p>
         </div>
       </div>
 
       {/* Language Badge */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500">Language:</span>
-        <span className="text-xs bg-gray-800 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-full capitalize">
+        <span className="text-xs text-muted-foreground">Language:</span>
+        <span className="text-xs bg-muted border border-border text-foreground/80 px-2 py-0.5 rounded-full capitalize">
           {language}
         </span>
       </div>
 
       {/* Code Snapshot */}
       <div>
-        <p className="text-xs text-gray-500 mb-2 font-medium">Submitted Code</p>
-        <div className="relative rounded-lg bg-gray-900 border border-gray-700 overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-gray-800/50">
-            <span className="text-xs text-gray-400 font-mono capitalize">{language}</span>
+        <p className="text-xs text-muted-foreground mb-2 font-medium">Submitted Code</p>
+        <div className="relative rounded-lg bg-[#0d1117] border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
+            <span className="text-xs text-muted-foreground font-mono capitalize">{language}</span>
             <button
               onClick={() => navigator.clipboard.writeText(code)}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Copy
             </button>
           </div>
-          <pre className="text-xs text-gray-300 font-mono p-4 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre leading-relaxed">
+          <pre className="text-xs text-foreground/80 font-mono p-4 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre leading-relaxed">
             {code}
           </pre>
         </div>
