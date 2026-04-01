@@ -59,7 +59,7 @@ export default function ProblemBrowserPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("");
+  const [difficulty, setDifficulty] = useState<Difficulty | undefined>(undefined);
   const [statusMap, setStatusMap] = useState<Record<string, SolveStatus>>({});
 
   const fetchProblems = useCallback(async () => {
