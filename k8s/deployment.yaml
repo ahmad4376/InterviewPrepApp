@@ -43,14 +43,18 @@ spec:
             httpGet:
               path: /api/health
               port: 3000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /api/health
               port: 3000
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
           env:
             - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
               value: pk_test_c3BlY2lhbC1saW9uZmlzaC03NC5jbGVyay5hY2NvdW50cy5kZXYk

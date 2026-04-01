@@ -35,7 +35,7 @@ interface ProblemListItem {
   problem_format: string;
 }
 
-type Difficulty = "" | "easy" | "medium" | "hard";
+type Difficulty = "easy" | "medium" | "hard" | undefined;
 type SolveStatus = "accepted" | "attempted" | undefined;
 
 const PAGE_SIZE = 20;
@@ -145,7 +145,6 @@ export default function ProblemBrowserPage() {
               <SelectValue placeholder="All Difficulties" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Difficulties</SelectItem>
               <SelectItem value="easy">Easy</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="hard">Hard</SelectItem>
