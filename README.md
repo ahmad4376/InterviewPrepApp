@@ -1,11 +1,16 @@
 # InterviewPrepApp
 
-AI-powered interview preparation platform — practice with real questions via real-time voice interaction, get adaptive difficulty scaling, and receive instant AI-generated feedback.
+AI-powered interview preparation platform — practice with real questions via real-time voice interaction, solve coding challenges with live code execution, get adaptive difficulty scaling, and receive instant AI-generated feedback.
+
+**[Live Demo](https://interview-prep-app-six-red.vercel.app)** &nbsp;|&nbsp; [GitHub](https://github.com/ahmad4376/InterviewPrepApp)
+
+---
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
+- [Subscription Tiers](#subscription-tiers)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [How It Works](#how-it-works)
@@ -16,12 +21,12 @@ AI-powered interview preparation platform — practice with real questions via r
 
 ## Overview
 
-InterviewPrepApp is a full-stack voice interview simulator built with Next.js. It uses **Deepgram** for real-time speech-to-text and text-to-speech, **OpenAI GPT-4o** for intelligent conversation and feedback analysis, and **MongoDB** for persistent storage. Users create interviews by providing a job title, company, and description — the system automatically generates relevant questions from a question bank (or via AI), then conducts an adaptive voice interview that adjusts difficulty based on candidate performance.
+InterviewPrepApp is a full-stack AI interview simulator built with Next.js. It combines two interview modes under one platform:
 
-The platform supports two modes:
+- **Voice Interviews** — real-time bidirectional voice conversation powered by Deepgram and GPT-4o. Candidates speak their answers; the AI interviewer listens, evaluates, and adapts the next question based on response quality.
+- **Coding Interviews** — LeetCode-style coding challenges with a Monaco editor, multi-language execution (JavaScript, Python, C++), visible test cases, and hidden test case grading.
 
-- **Individual interviews** — a single user practices and receives personal feedback.
-- **Mass interviews** — an interviewer creates a session and shares a link with multiple candidates, then reviews all results from a dashboard.
+The platform supports both **individual practice** and **mass interview campaigns** (interviewers share a link with multiple candidates and review all results from a dashboard). A Stripe-backed subscription model controls access: Free, Pro ($9/mo), and Business ($49/mo).
 
 ---
 
@@ -33,24 +38,36 @@ The platform supports two modes:
 - Speech-to-text using Deepgram Nova-3
 - Text-to-speech with selectable voices (Asteria, Orion, Luna, Arcas)
 - Natural conversational flow powered by GPT-4o function calling
+- Resume upload (PDF/DOCX) parsed by AI to personalize interview questions
 
 ### Adaptive Difficulty
 
 - Questions scale from level 1 (basic) to level 5 (expert)
 - Response quality assessment (excellent / good / partial / poor) drives difficulty adjustment
 - Topic-aware selection avoids repeating similar areas within recent questions
-- Bell-curve difficulty distribution (10% / 20% / 35% / 25% / 10% across levels 1-5)
+- Bell-curve difficulty distribution (10% / 20% / 35% / 25% / 10% across levels 1–5)
+
+### Coding Interview Module
+
+- LeetCode-style problem workspace with Monaco editor (VS Code engine)
+- Multi-language support: JavaScript, Python, C++
+- Run code against visible test cases with real output and execution time
+- Submit to run hidden test cases with pass/fail summary
+- Submission history per problem
+- Resizable split-panel layout (problem description + editor + console)
+- Code persistence across browser sessions per problem per language
 
 ### Intelligent Question Selection
 
 - Extracts keywords from job descriptions to find relevant questions
 - Matches against a MongoDB question bank with tag-based search and alias normalization
 - Falls back to OpenAI generation when the question bank has insufficient coverage
+- Optional custom question list: pick specific questions before starting
 
 ### AI-Generated Feedback
 
 - Full transcript analysis after each interview
-- Overall score (1-5) with summary assessment
+- Overall score (1–5) with summary assessment
 - Category breakdowns: Technical Knowledge, Communication, Problem Solving, Depth of Understanding
 - Per-question scoring with individual assessments
 - Identified strengths and areas for improvement
@@ -61,7 +78,21 @@ The platform supports two modes:
 - Create a session and share a unique join link with candidates
 - Each candidate gets their own adaptive interview instance
 - Dashboard view of all candidate results, scores, and transcripts
+- Side-by-side candidate comparison and ranking
 - Individual PDF report generation per candidate
+
+### Analytics Dashboard
+
+- Interview volume over time (daily/weekly/monthly charts)
+- Score distribution across interviews
+- Pipeline funnel: scheduled → in progress → completed
+- Organization-level metrics for Business tier accounts
+
+### Team & Organization Management
+
+- Multiple team seats under a shared organization (via Clerk)
+- Role-based access (admin / member)
+- Custom branding and white-label support for Business accounts
 
 ### Dashboard
 
@@ -73,18 +104,40 @@ The platform supports two modes:
 
 ---
 
+## Subscription Tiers
+
+| Feature                          | Free       | Pro ($9/mo) | Business ($49/mo) |
+| -------------------------------- | ---------- | ----------- | ----------------- |
+| Voice interviews                 | 3 / month  | Unlimited   | Unlimited         |
+| Coding problems                  | 10 / month | Unlimited   | Unlimited         |
+| Detailed feedback & scoring      | Basic      | Full        | Full              |
+| PDF reports                      |            | Yes         | Yes               |
+| Resume parsing                   |            | Yes         | Yes               |
+| Mass interviews (shareable link) |            |             | Yes               |
+| Team seats & role management     |            |             | Yes               |
+| Candidate comparison & ranking   |            |             | Yes               |
+| Analytics dashboard              |            |             | Yes               |
+| Custom branding / white-label    |            |             | Yes               |
+
+Billing is powered by Stripe. Users manage plans, view usage, and access the Stripe customer portal from the **Billing** page.
+
+---
+
 ## Tech Stack
 
-| Layer          | Technology                                                         |
-| -------------- | ------------------------------------------------------------------ |
-| Framework      | Next.js 15 (App Router), React 19, TypeScript                      |
-| Voice AI       | Deepgram SDK (Nova-3 STT, Aura TTS, Agent API)                     |
-| LLM            | OpenAI GPT-4o (interview logic, question generation, feedback)     |
-| Database       | MongoDB Atlas + Mongoose 9                                         |
-| Authentication | Clerk (sign-up/sign-in, session management, middleware protection) |
-| Styling        | Tailwind CSS 3, SASS                                               |
-| PDF Generation | PDFKit                                                             |
-| UI             | Lucide React (icons), Sonner (toasts), Lottie (animations)         |
+| Layer          | Technology                                                                     |
+| -------------- | ------------------------------------------------------------------------------ |
+| Framework      | Next.js 15 (App Router), React 19, TypeScript                                  |
+| Voice AI       | Deepgram SDK v4 (Nova-3 STT, Aura TTS, Voice Agent API)                        |
+| LLM            | OpenAI GPT-4o (interview logic, question generation, feedback, resume parsing) |
+| Code Editor    | Monaco Editor (`@monaco-editor/react`)                                         |
+| Database       | MongoDB Atlas + Mongoose 9                                                     |
+| Authentication | Clerk (sign-up/sign-in, organizations, session management, middleware)         |
+| Payments       | Stripe (subscriptions, usage limits, customer portal)                          |
+| Styling        | Tailwind CSS 3, SASS, Radix UI primitives, Framer Motion                       |
+| PDF Generation | PDFKit (server-side streaming)                                                 |
+| Charts         | Recharts                                                                       |
+| Deployment     | Docker → GHCR → Google Kubernetes Engine (GKE), CI via GitHub Actions          |
 
 ---
 
@@ -92,88 +145,142 @@ The platform supports two modes:
 
 ```
 app/
-├── (dashboard)/                  # Protected routes (requires auth)
-│   ├── create-interview/         # Interview creation form
-│   ├── dashboard/                # Main dashboard with interview list
-│   ├── feedback/[id]/            # Feedback display page
-│   ├── interview/[id]/           # Live voice interview session
-│   ├── interviews/[id]/candidates/  # Mass interview candidate list
-│   └── layout.tsx                # Shared dashboard layout + nav
+├── (dashboard)/                        # Protected routes (requires auth)
+│   ├── create-interview/               # Interview creation flow
+│   │   ├── page.tsx                    # Step 1: job title, company, description
+│   │   ├── pick-questions/             # Step 2: optional custom question selection
+│   │   └── custom-questions/           # Step 3: add custom questions
+│   ├── dashboard/                      # Main dashboard with interview list
+│   │   └── analytics/                  # Analytics charts (Business tier)
+│   ├── interview/[id]/                 # Live voice interview session
+│   ├── feedback/[id]/                  # Post-interview feedback display
+│   ├── interviews/[id]/
+│   │   ├── candidates/                 # Mass interview candidate list
+│   │   │   └── [sessionId]/feedback/  # Per-candidate feedback
+│   │   └── compare/                    # Side-by-side candidate comparison
+│   ├── coding-results/[id]/           # Coding interview results
+│   ├── billing/                        # Subscription plans + usage meter
+│   ├── profile/                        # User profile settings
+│   └── team/                           # Team management + branding
 │
-├── api/                          # Backend API routes
-│   ├── authenticate/             # Deepgram token endpoint
-│   ├── interviews/               # Interview CRUD + join + reports
-│   └── candidate-sessions/       # Candidate session management + reports
+├── (coding)/                           # Coding interview routes
+│   └── coding-interview/[slug]/        # Coding workspace (Monaco + console)
+│       ├── _components/                # Editor, panels, toolbar
+│       └── _lib/                       # Types, templates, hooks
 │
-├── components/                   # React components
-│   ├── landing/                  # Landing page sections
-│   ├── App.js                    # Core voice interaction component
-│   ├── FeedbackDisplay.tsx       # Feedback visualization
-│   ├── InterviewTranscript.tsx   # Transcript viewer
-│   └── EditInterviewModal.tsx    # Interview edit form
+├── (admin)/                            # Internal admin panel
+│   └── admin/
+│       ├── page.tsx                    # Admin overview
+│       ├── users/                      # User management
+│       ├── organizations/              # Organization management
+│       └── metrics/                    # Platform-wide metrics
 │
-├── context/                      # React context providers
-│   ├── VoiceBotContextProvider   # Voice bot state (reducer-based)
-│   ├── DeepgramContextProvider   # Deepgram SDK connection
-│   └── MicrophoneContextProvider # Browser microphone access
+├── api/                                # Next.js Route Handlers
+│   ├── authenticate/                   # Deepgram token endpoint
+│   ├── interviews/                     # Interview CRUD + join + reports
+│   ├── candidate-sessions/             # Candidate session management + reports
+│   ├── coding-interviews/              # Coding interview management
+│   ├── leetcode/                       # Problem fetch + code execution
+│   ├── submissions/                    # Submission history
+│   ├── billing/                        # Stripe checkout + portal + webhooks
+│   └── health/                         # Health check endpoint
 │
-├── lib/                          # Server-side utilities
-│   ├── auth.ts                   # Clerk auth helper
-│   ├── mongodb.ts                # MongoDB connection singleton
-│   ├── openai.ts                 # OpenAI: question generation + feedback
-│   ├── questionSelection.ts      # Question bank querying + keyword extraction
-│   ├── scoring.ts                # Candidate ranking + topic matching
-│   ├── sampling.ts               # Adaptive question selection algorithm
-│   ├── constants.ts              # Interview configs + voice definitions
-│   └── types.ts                  # Shared TypeScript interfaces
+├── components/                         # React components
+│   ├── App.js                          # Core voice interaction component
+│   ├── analytics/                      # VolumeChart, ScoreChart, PipelineChart
+│   ├── subscription/                   # UpgradePrompt, UsageMeter, TierBadge
+│   ├── ui/                             # Shared UI primitives (card, button, etc.)
+│   ├── landing/                        # Landing page sections
+│   ├── FeedbackDisplay.tsx             # Feedback visualization
+│   ├── InterviewTranscript.tsx         # Transcript viewer
+│   └── EditInterviewModal.tsx          # Interview edit form
 │
-├── models/                       # Mongoose schemas
-│   ├── Interview.ts              # Interview document
-│   ├── CandidateSession.ts       # Mass interview candidate session
-│   └── Question.ts               # Question bank entry
+├── context/                            # React context providers
+│   ├── VoiceBotContextProvider.tsx     # Voice bot state (reducer-based)
+│   ├── DeepgramContextProvider.js      # Deepgram SDK connection
+│   └── MicrophoneContextProvider.js   # Browser microphone access
 │
-├── utils/                        # Client-side utilities
-│   ├── deepgramUtils.ts          # WebSocket config builders
-│   └── audioUtils.js             # Audio processing helpers
+├── lib/                                # Server-side utilities
+│   ├── auth.ts                         # Clerk auth helper
+│   ├── mongodb.ts                      # MongoDB connection singleton
+│   ├── openai.ts                       # OpenAI: question generation + feedback
+│   ├── questionSelection.ts            # Question bank querying + keyword extraction
+│   ├── scoring.ts                      # Candidate ranking + topic matching
+│   ├── sampling.ts                     # Adaptive question selection algorithm
+│   ├── resumeParser.ts                 # PDF/DOCX → structured resume data (via AI)
+│   ├── constants.ts                    # Interview configs + voice definitions
+│   └── types.ts                        # Shared TypeScript interfaces
 │
-├── join/                         # Public route for mass interview candidates
-├── sign-in/                      # Clerk sign-in page
-├── sign-up/                      # Clerk sign-up page
-├── page.tsx                      # Landing page
-└── layout.tsx                    # Root layout (ClerkProvider)
+├── models/                             # Mongoose schemas
+│   ├── Interview.ts                    # Interview document
+│   ├── CandidateSession.ts             # Mass interview candidate session
+│   ├── Question.ts                     # Question bank entry
+│   ├── LeetcodeQuestion.ts             # Coding problem
+│   ├── Submission.ts                   # Code submission record
+│   └── User.ts                         # User + subscription tier
+│
+├── utils/                              # Client-side utilities
+│   ├── deepgramUtils.ts                # WebSocket config builders
+│   └── audioUtils.js                   # Audio processing helpers
+│
+├── join/[token]/session/[sessionId]/  # Public route for mass interview candidates
+├── sign-in/                            # Clerk sign-in page
+├── sign-up/                            # Clerk sign-up page
+├── page.tsx                            # Landing page
+└── layout.tsx                          # Root layout (ClerkProvider)
 
 scripts/
-├── data/                         # Question bank JSON data
-└── seed-questions.ts             # DB seed script
+├── data/                               # Question bank JSON data
+└── seed-questions.ts                   # DB seed script
 
-middleware.ts                     # Clerk route protection
+k8s/                                    # Kubernetes manifests (GKE deployment)
+├── deployment.yaml
+├── service.yaml
+└── namespace.yaml
+
+middleware.ts                           # Clerk route protection
+Dockerfile                              # Production container (standalone output)
 ```
 
 ### Database Models
 
-**Interview** — Stores interview configuration, adaptive state, transcript, and AI feedback. Supports both individual and mass interview modes via `isMassInterview` and `shareToken` fields.
+**Interview** — Stores interview configuration, adaptive state, transcript, and AI feedback. Supports individual and mass interview modes via `isMassInterview` and `shareToken` fields.
 
 **CandidateSession** — Tracks each candidate's progress in a mass interview. Contains its own copy of the adaptive state, transcript, and feedback, independent from the parent interview template.
 
-**Question** — Question bank entries with `question_text`, `answer_text`, `tags`, `difficulty_score` (1-5), and `rank_value` for relevance ordering.
+**Question** — Question bank entries with `question_text`, `answer_text`, `tags`, `difficulty_score` (1–5), and `rank_value` for relevance ordering.
+
+**LeetcodeQuestion** — Coding problem with description, examples, test cases (visible + hidden), starter templates per language, and difficulty bucket (easy / medium / hard).
+
+**Submission** — Records each code submission: user, problem, language, code, pass/fail, and hidden test case summary.
+
+**User** — Clerk user reference with subscription tier (`free` / `pro` / `business`), usage counters, and Stripe customer/subscription IDs.
 
 ---
 
 ## How It Works
 
-### End-to-End Interview Flow
+### End-to-End Voice Interview Flow
 
 1. **Sign up / Sign in** via Clerk. Authenticated users are redirected to the dashboard.
 
-2. **Create an interview** — provide a position title, company name, and job description. The server extracts keywords from the description, queries the MongoDB question bank for relevant matches (using tag aliases and fuzzy matching), and falls back to OpenAI generation if fewer than 3 relevant questions are found. A pool of questions and a difficulty sampling plan are persisted.
+2. **Create an interview** — provide a position title, company name, and job description. Optionally upload a resume (PDF or DOCX): the server extracts text and uses GPT-4o-mini to parse it into structured data (skills, experience, projects, education), which is injected into the AI interviewer's system prompt for personalized questions. The server also extracts keywords from the description, queries the MongoDB question bank for relevant matches, and falls back to OpenAI generation if fewer than 3 relevant questions are found.
 
-3. **Start the interview** — a Deepgram WebSocket connection is established for real-time voice. The AI interviewer ("Alex") greets the candidate and begins asking questions via function calling. After each answer, the LLM assesses response quality and suggests topics, which feeds into the adaptive selection algorithm to pick the next question.
+3. **Start the interview** — a Deepgram WebSocket connection is established for real-time voice. The AI interviewer ("Alex") greets the candidate and begins asking questions via GPT-4o function calling. After each answer, the LLM assesses response quality and suggests topics, which feeds into the adaptive selection algorithm to pick the next question.
 
-4. **Adaptive selection** — the scoring engine ranks remaining questions by topic relevance (matching LLM-suggested topics against question tags) and difficulty fit (how close the question's difficulty is to the current target). A diversity penalty discourages repeating recent topics.
+4. **Adaptive selection** — the scoring engine ranks remaining questions by topic relevance (matching LLM-suggested topics against question tags) and difficulty fit. A diversity penalty discourages repeating recent topics.
 
 5. **Interview ends** — when all target questions are asked, the agent wraps up. The full transcript is sent to OpenAI for structured feedback generation (overall score, category breakdowns, per-question assessments, strengths, improvements).
 
 6. **View feedback** — the results page shows scores, charts, and detailed breakdowns. Users can download a PDF report.
+
+### End-to-End Coding Interview Flow
+
+1. A coding interview is created with a set of problems (fetched from the LeetcodeQuestion collection).
+2. The candidate works in the Monaco editor, choosing JavaScript, Python, or C++.
+3. **Run** executes visible test cases and shows output, execution time, and errors in the console panel.
+4. **Submit** runs both visible and hidden test cases. Pass/fail counts for hidden tests are shown separately.
+5. Submission history is persisted per user and problem.
 
 ### API Endpoints
 
@@ -192,6 +299,16 @@ middleware.ts                     # Clerk route protection
 | `PATCH`  | `/api/candidate-sessions/[sessionId]`        | Update candidate session                                     |
 | `GET`    | `/api/candidate-sessions/[sessionId]/report` | Download candidate PDF report                                |
 | `POST`   | `/api/authenticate`                          | Get a Deepgram access token for WebSocket                    |
+| `GET`    | `/api/leetcode`                              | List coding problems                                         |
+| `GET`    | `/api/leetcode/[id]`                         | Get a single coding problem                                  |
+| `POST`   | `/api/leetcode/execute`                      | Execute code against test cases                              |
+| `GET`    | `/api/submissions`                           | Get submission history for the authenticated user            |
+| `POST`   | `/api/submissions`                           | Save a code submission                                       |
+| `GET`    | `/api/coding-interviews/[id]`                | Get coding interview details                                 |
+| `POST`   | `/api/billing/checkout`                      | Create a Stripe checkout session                             |
+| `POST`   | `/api/billing/portal`                        | Open Stripe customer portal                                  |
+| `POST`   | `/api/billing/webhook`                       | Handle Stripe webhook events                                 |
+| `GET`    | `/api/health`                                | Health check (used by Kubernetes readiness probe)            |
 
 ---
 
@@ -207,12 +324,13 @@ middleware.ts                     # Clerk route protection
 
 You will need API keys from the following services:
 
-| Service           | Purpose                            | Sign Up                                                               |
-| ----------------- | ---------------------------------- | --------------------------------------------------------------------- |
-| **Deepgram**      | Voice AI (STT + TTS + Agent API)   | [console.deepgram.com](https://console.deepgram.com/signup?jump=keys) |
-| **OpenAI**        | LLM for interview logic + feedback | [platform.openai.com](https://platform.openai.com/)                   |
-| **Clerk**         | User authentication                | [clerk.com](https://clerk.com/)                                       |
-| **MongoDB Atlas** | Database                           | [mongodb.com/atlas](https://www.mongodb.com/atlas)                    |
+| Service           | Purpose                                       | Sign Up                                                               |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------------------- |
+| **Deepgram**      | Voice AI (STT + TTS + Agent API)              | [console.deepgram.com](https://console.deepgram.com/signup?jump=keys) |
+| **OpenAI**        | LLM for interview logic, feedback, resume     | [platform.openai.com](https://platform.openai.com/)                   |
+| **Clerk**         | User authentication + organizations           | [clerk.com](https://clerk.com/)                                       |
+| **MongoDB Atlas** | Database                                      | [mongodb.com/atlas](https://www.mongodb.com/atlas)                    |
+| **Stripe**        | Subscription billing (optional for local dev) | [stripe.com](https://stripe.com/)                                     |
 
 ### Option A: Dev Container (Recommended)
 
@@ -267,6 +385,12 @@ NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# Stripe (optional for local dev — billing features will be disabled without these)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_PRO_MONTHLY=price_...
+STRIPE_PRICE_BUSINESS_MONTHLY=price_...
 ```
 
 > `.env.local` is gitignored and never committed. Ask a team member for the shared dev keys.
@@ -293,32 +417,40 @@ Open http://localhost:3000 in your browser.
 
 ## For Developers
 
-This section covers everything you need to know to contribute to or extend the codebase.
-
 ### Project Conventions
 
 - **Framework**: Next.js 15 App Router with a mix of server components and client components (`"use client"` directive)
 - **Language**: TypeScript throughout, with a few legacy `.js` files in `context/` and `utils/`
 - **Styling**: Tailwind CSS utility classes. Global styles in `app/globals.css`. Green accent color (`#3ecf8e`) for primary actions.
-- **State management**: React Context + `useReducer` for voice bot state (see `VoiceBotContextProvider` and `VoiceBotReducer`)
-- **API routes**: Next.js Route Handlers in `app/api/`. All protected routes use `getAuthUserId()` from `app/lib/auth.ts`.
+- **State management**: React Context + `useReducer` for voice bot state (`VoiceBotContextProvider` + `VoiceBotReducer`)
+- **API routes**: Next.js Route Handlers in `app/api/`. All protected routes call `getAuthUserId()` from `app/lib/auth.ts`.
 - **Database**: Mongoose models with a connection singleton in `app/lib/mongodb.ts`. Always call `await connectDB()` before queries.
-- **Linting**: ESLint + Prettier. Run `npm run lint` to check.
+- **Linting**: ESLint + Prettier with Husky pre-commit hooks and lint-staged. Run `npm run lint` to check.
 
 ### Key Architectural Patterns
 
-**Adaptive Interview Algorithm** — The core interview logic lives in three files:
+**Adaptive Interview Algorithm** — lives in three files:
 
 - `lib/scoring.ts` — ranks candidate questions by topic relevance and difficulty fit, applies diversity penalty
 - `lib/sampling.ts` — builds the difficulty distribution plan, orchestrates `selectNextQuestion()`
 - `lib/questionSelection.ts` — queries the question bank, extracts keywords, normalizes tags
 
-The adaptive loop works client-side: Deepgram's agent calls `get_next_question` as a function call, the client intercepts it, runs `selectNextQuestion()` locally, and returns the next question text to the agent. This avoids a server round-trip for each question.
+The adaptive loop works client-side: Deepgram's agent calls `get_next_question` as a function call, the client intercepts it, runs `selectNextQuestion()` locally, and returns the next question text to the agent — avoiding a server round-trip per question.
 
-**Function Calling** — The voice agent uses two client-side function definitions:
+**Function Calling** — the voice agent uses two client-side function definitions:
 
 - `get_next_question` — receives LLM analysis of the last answer, returns the next question or `{ action: "end" }`
 - `end_interview` — signals the client to close the session and generate feedback
+
+**Resume Parsing Pipeline** — `lib/resumeParser.ts`:
+
+1. Receives a Buffer + MIME type (PDF or DOCX)
+2. Extracts raw text via `pdf-parse` or `mammoth`
+3. Sends raw text to GPT-4o-mini with a structured JSON schema prompt
+4. Returns a typed `ResumeData` object (name, skills, experience, education, projects, certifications)
+5. `formatResumeForPrompt()` converts this into an LLM-friendly string injected into the interviewer's system prompt
+
+**Subscription & Usage Gating** — `useSubscription()` hook fetches the user's tier and usage counters. The `UpgradePrompt` component is rendered in-place when a user exceeds their tier's limits. Usage counters are incremented server-side at the API layer before starting interviews or submitting code.
 
 **PDF Report Generation** — uses PDFKit as a server-side streaming library. The Next.js config externalizes it via `serverComponentsExternalPackages` to avoid bundling issues.
 
@@ -353,13 +485,14 @@ To populate or update the question bank:
 npx tsx scripts/seed-questions.ts
 ```
 
-The seed script reads from `scripts/data/combined_2.json` and assigns difficulty scores (1-5) based on tag heuristics. It uses upsert operations, so it is safe to run repeatedly.
+The seed script reads from `scripts/data/combined_2.json` and assigns difficulty scores (1–5) based on tag heuristics. It uses upsert operations, so it is safe to run repeatedly.
 
 ### Environment Setup Notes
 
 - **Deepgram API Key**: Must have `usage:write` permission. Select "Member" role when creating the key.
-- **Clerk**: After creating a Clerk application, configure the sign-in/sign-up URLs in the Clerk dashboard to match the env vars above.
+- **Clerk**: After creating a Clerk application, configure the sign-in/sign-up URLs in the Clerk dashboard to match the env vars above. Enable Organizations in the Clerk dashboard for team features.
 - **MongoDB**: The app connects via the `MONGO_URL` connection string. Ensure your IP is whitelisted in Atlas network access settings.
+- **Stripe**: For local development, use the Stripe CLI to forward webhooks: `stripe listen --forward-to localhost:3000/api/billing/webhook`. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`.
 
 ### Route Protection
 
@@ -397,3 +530,13 @@ Authentication is handled by Clerk middleware in `middleware.ts`:
 - To change the difficulty distribution, modify `DIFFICULTY_WEIGHTS` in `lib/sampling.ts`
 - To adjust how response quality maps to difficulty changes, modify `getTargetDifficulty()` in `lib/scoring.ts`
 - To change topic matching behavior, update `tagsMatch()` and `TAG_ALIASES` in `lib/scoring.ts`
+
+### CI / CD Pipeline
+
+On every push to `main`:
+
+1. **CI job**: format check → lint → typecheck → build
+2. **build-and-push job**: builds Docker image and pushes to GHCR (`ghcr.io/ahmad4376/interviewprepapp`)
+3. **deploy job**: authenticates to GCP, updates the GKE deployment with the new image, and waits for rollout
+
+Pull requests run only the CI job (no push/deploy).
