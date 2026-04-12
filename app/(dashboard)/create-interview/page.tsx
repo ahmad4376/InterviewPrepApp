@@ -762,34 +762,53 @@ function HRInterviewForm({ onBack }: { onBack: () => void }) {
 }
 
 // ─── Coding Interview Form ────────────────────────────────────────
+interface CodingMassConfig {
+  title: string;
+  timeLimit: number | null;
+  isMassInterview: boolean;
+  includesCoding?: boolean;
+  includesDefaultCoding?: boolean;
+  includesMCQ?: boolean;
+  difficulty?: string;
+  numProblems?: number;
+}
 
 function CodingInterviewForm({ onBack }: { onBack: () => void }) {
   const router = useRouter();
   const { isBusiness } = useSubscription();
   const [codingTitle, setCodingTitle] = useState("Coding Practice");
-  const [codingDifficulty, setCodingDifficulty] = useState<"easy" | "medium" | "hard" | "mixed">(
-    "mixed",
-  );
+  const [codingDifficulty, setCodingDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [codingNumProblems, setCodingNumProblems] = useState(5);
   const [codingTimeLimit, setCodingTimeLimit] = useState<number | null>(60);
   const [isMassInterview, setIsMassInterview] = useState(false);
   const [usePickQuestions, setUsePickQuestions] = useState(false);
+  const [includeMCQ, setIncludeMCQ] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (usePickQuestions) {
-      sessionStorage.setItem(
-        "codingMassConfig",
-        JSON.stringify({
-          title: codingTitle,
-          timeLimit: codingTimeLimit,
-          isMassInterview,
-        }),
-      );
+    // Validation: must include at least one type
+    if (isMassInterview && !usePickQuestions && !includeMCQ) {
+      setError("Please select at least one question type (Coding or MCQ)");
+      return;
+    }
+
+    if (isMassInterview && (usePickQuestions || includeMCQ)) {
+      const config: CodingMassConfig = {
+        title: codingTitle,
+        timeLimit: codingTimeLimit,
+        isMassInterview,
+        includesCoding: usePickQuestions,
+        includesMCQ: includeMCQ,
+        // Only include these if using default coding questions
+        difficulty: String(!usePickQuestions ? codingDifficulty : undefined), //Is this correct??
+        numProblems: !usePickQuestions ? codingNumProblems : undefined,
+      };
+      sessionStorage.setItem("codingMassConfig", JSON.stringify(config));
       router.push("/create-interview/pick-questions");
       return;
     }
+
     setLoading(true);
     setError("");
     try {
@@ -851,24 +870,48 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
             />
           </div>
 
-          {!usePickQuestions && (
+          {!usePickQuestions && !includeMCQ && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="codingDifficulty">Difficulty</Label>
+                <Label htmlFor="codingDifficulty">Difficulty Level</Label>
                 <Select
-                  value={codingDifficulty}
-                  onValueChange={(v) =>
-                    setCodingDifficulty(v as "easy" | "medium" | "hard" | "mixed")
-                  }
+                  value={String(codingDifficulty)}
+                  onValueChange={(v) => setCodingDifficulty(parseInt(v) as 1 | 2 | 3 | 4 | 5)}
                 >
                   <SelectTrigger id="codingDifficulty">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                    <SelectItem value="mixed">Mixed</SelectItem>
+                    <SelectItem value="1">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Level 1 - Beginner</span>
+                        <span className="text-xs text-muted-foreground">100% Easy</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="2">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Level 2 - Easy+</span>
+                        <span className="text-xs text-muted-foreground">40% Easy, 60% Medium</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="3">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Level 3 - Intermediate</span>
+                        <span className="text-xs text-muted-foreground">100% Medium</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="4">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Level 4 - Advanced</span>
+                        <span className="text-xs text-muted-foreground">60% Medium, 40% Hard</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="5">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">Level 5 - Expert</span>
+                        <span className="text-xs text-muted-foreground">40% Medium, 60% Hard</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -922,42 +965,85 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
                   checked={isMassInterview}
                   onCheckedChange={(v) => {
                     setIsMassInterview(v);
-                    if (!v) setUsePickQuestions(false);
+                    if (!v) {
+                      setUsePickQuestions(false);
+                      setIncludeMCQ(false);
+                    }
                   }}
                 />
               </div>
 
               {isMassInterview && (
-                <button
-                  type="button"
-                  onClick={() => setUsePickQuestions((v) => !v)}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
-                    usePickQuestions
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
-                  )}
-                >
-                  <ListChecks
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newValue = !usePickQuestions;
+                      setUsePickQuestions(newValue);
+                      // If turning off pick questions and MCQ is also off, we need at least one
+                      // Don't force anything here - validation will handle it
+                    }}
                     className={cn(
-                      "h-4 w-4 shrink-0",
-                      usePickQuestions ? "text-primary" : "text-muted-foreground",
+                      "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                      usePickQuestions
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
                     )}
-                  />
-                  <div>
-                    <p
+                  >
+                    <Code2
                       className={cn(
-                        "text-sm font-medium",
-                        usePickQuestions ? "text-primary" : "text-foreground",
+                        "h-4 w-4 shrink-0",
+                        usePickQuestions ? "text-primary" : "text-muted-foreground",
                       )}
-                    >
-                      Pick Questions Manually
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Choose specific problems from our library
-                    </p>
-                  </div>
-                </button>
+                    />
+                    <div>
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          usePickQuestions ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        {usePickQuestions ? "Custom Coding Questions" : "Use Default Coding Questions"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {usePickQuestions 
+                          ? "Pick specific LeetCode problems from our library"
+                          : "Auto-generate questions based on difficulty level"}
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIncludeMCQ((v) => !v)}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all",
+                      includeMCQ
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
+                    )}
+                  >
+                    <ListChecks
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        includeMCQ ? "text-primary" : "text-muted-foreground",
+                      )}
+                    />
+                    <div>
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          includeMCQ ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        Add MCQ Questions
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Create custom multiple-choice questions
+                      </p>
+                    </div>
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -980,10 +1066,10 @@ function CodingInterviewForm({ onBack }: { onBack: () => void }) {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Creating...
               </>
-            ) : usePickQuestions ? (
+            ) : usePickQuestions || includeMCQ ? (
               <>
                 <ListChecks className="h-4 w-4" />
-                Continue to Pick Questions
+                Continue to Configure Questions
               </>
             ) : (
               <>

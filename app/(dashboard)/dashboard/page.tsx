@@ -58,6 +58,8 @@ interface CodingInterviewItem {
   numProblems: number;
   timeLimit: number | null;
   createdAt: string;
+  isMassInterview?: boolean;
+  shareToken?: string;
 }
 
 interface DashboardItem {
@@ -180,6 +182,8 @@ function DashboardContent() {
           difficulty: c.difficulty,
           numProblems: c.numProblems,
           timeLimit: c.timeLimit,
+          isMassInterview: c.isMassInterview,
+          shareToken: c.shareToken,
         }));
         setItems([...voiceItems, ...codingItems]);
       })
@@ -461,26 +465,65 @@ function DashboardContent() {
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {isCoding ? (
                       <>
-                        {item.status === "scheduled" && (
-                          <Button asChild size="sm">
-                            <Link href={`/coding-session/${item._id}`}>
-                              Start <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        )}
-                        {item.status === "in-progress" && (
-                          <Button asChild size="sm" variant="secondary" className="text-yellow-500">
-                            <Link href={`/coding-session/${item._id}`}>
-                              Resume <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        )}
-                        {item.status === "completed" && (
-                          <Button asChild size="sm" variant="success">
-                            <Link href={`/coding-results/${item._id}`}>
-                              View Results <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
+                        {/* Mass Interview Actions */}
+                        {item.isMassInterview ? (
+                          <>
+                            {item.shareToken && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleCopyLink(item.shareToken!)}
+                              >
+                                {copiedToken === item.shareToken ? (
+                                  <>
+                                    <Check className="h-3.5 w-3.5 text-accent" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3.5 w-3.5" />
+                                    Copy Link
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="ghost"
+                              className="text-purple-400 hover:text-purple-300"
+                            >
+                              <Link href={`/coding-interviews/${item._id}/candidates`}>
+                                <Users className="h-3.5 w-3.5" />
+                                Candidates
+                              </Link>
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {/* Regular Coding Interview Actions */}
+                            {item.status === "scheduled" && (
+                              <Button asChild size="sm">
+                                <Link href={`/coding-session/${item._id}`}>
+                                  Start <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                              </Button>
+                            )}
+                            {item.status === "in-progress" && (
+                              <Button asChild size="sm" variant="secondary" className="text-yellow-500">
+                                <Link href={`/coding-session/${item._id}`}>
+                                  Resume <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                              </Button>
+                            )}
+                            {item.status === "completed" && (
+                              <Button asChild size="sm" variant="success">
+                                <Link href={`/coding-results/${item._id}`}>
+                                  View Results <ArrowRight className="h-3.5 w-3.5" />
+                                </Link>
+                              </Button>
+                            )}
+                          </>
                         )}
                       </>
                     ) : item.isMassInterview ? (
