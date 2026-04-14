@@ -202,7 +202,6 @@ export const App = ({
           bufferAudio(event.data); // Process the ArrayBuffer data to play the audio
         }
       } else {
-        console.log(event?.data);
         // Handle other types of messages such as strings
         setData(event.data);
         onMessageEvent(event.data);

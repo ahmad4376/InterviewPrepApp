@@ -97,9 +97,6 @@ async function runOnPiston(code: string, language: string, stdin: string) {
   const version = runtimes[pistonLang];
   if (!version) throw new Error(`Runtime "${pistonLang}" not installed in Piston`);
 
-  console.log(
-    `[PISTON REQUEST] language=${pistonLang} version=${version} stdin length=${stdin.length}`,
-  );
   const response = await fetch(PISTON_EXEC_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -118,9 +115,6 @@ async function runOnPiston(code: string, language: string, stdin: string) {
   }
 
   const json = await response.json();
-  console.log(
-    `[PISTON RESPONSE] stdout length=${json.run?.stdout?.length} stderr length=${json.run?.stderr?.length} code=${json.run?.code}`,
-  );
   return json;
 }
 
@@ -130,7 +124,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { code, language, problemId, includeHidden, codingInterviewId } = body;
-    console.log("hidden: ", includeHidden);
 
     if (!code || !language || !problemId) {
       return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
@@ -318,8 +311,6 @@ export async function POST(request: NextRequest) {
       }
 
       if (includeHidden) {
-        console.log("[HIDDEN] includeHidden=", includeHidden);
-        console.log("[HIDDEN] hidden_tests count=", problem.hidden_tests?.length ?? 0);
         const hiddenExamples = problem.hidden_tests ?? [];
         for (let i = 0; i < hiddenExamples.length; i++) {
           const ex = hiddenExamples[i];
@@ -413,9 +404,6 @@ export async function POST(request: NextRequest) {
                 sub.runtime = avgTime;
                 sub.submittedAt = new Date();
                 await interview.save();
-                console.log(
-                  `[SAVE SUBMISSION] Saved to CodingInterview ${codingInterviewId} problemId=${problemId} status=${submissionStatus}`,
-                );
               }
             }
           }
@@ -431,9 +419,6 @@ export async function POST(request: NextRequest) {
             testsTotal: totalTests,
             runtime: avgTime,
           });
-          console.log(
-            `[SAVE SUBMISSION] Saved standalone Submission userId=${userId} problemId=${problemId} status=${submissionStatus}`,
-          );
 
           // Bust cached status map and problem submission history so the
           // problem browser and submissions tab reflect the new result immediately.

@@ -58,3 +58,4 @@ app/lib/new_dataset.json
 
 # LeetCode fetcher scripts & data
 scripts/leetcode-fetcher/
+.env.production

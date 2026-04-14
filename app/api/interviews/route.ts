@@ -169,22 +169,17 @@ export async function POST(request: Request) {
   } else {
     if (interviewType === "hr") {
       // HR interviews use LLM-generated HR screening questions with focus areas
-      console.log("Generating HR screening questions via LLM");
       questionPool = await generateHRQuestions(title, description, poolSize, focusAreas);
     } else {
       // Technical interviews: Fetch questions from DB (pool is larger than what we'll ask)
       try {
         questionPool = await selectQuestions(title, description, poolSize);
-        console.log(`Selected ${questionPool.length} questions from DB (wanted ${poolSize})`);
       } catch (err) {
         console.error("DB question selection failed, falling back to OpenAI:", err);
       }
 
       // If not enough relevant DB questions, discard them and use OpenAI generation
       if (questionPool.length < MIN_DB_QUESTIONS) {
-        console.log(
-          `Only ${questionPool.length} DB questions found (need ${MIN_DB_QUESTIONS}), using OpenAI generation`,
-        );
         questionPool = await generatePoolQuestions(title, description, poolSize, resumeData);
       }
     }
