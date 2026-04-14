@@ -20,8 +20,6 @@ spec:
       labels:
         app: interview-prep
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
