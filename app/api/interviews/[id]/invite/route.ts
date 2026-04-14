@@ -20,12 +20,25 @@ function parseEmails(raw: string): string[] {
   return [...new Set(parts)];
 }
 
+/** Escape characters that have special meaning in HTML to prevent injection. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function buildEmailHtml(params: {
   interviewTitle: string;
   company: string;
   joinUrl: string;
 }): string {
-  const { interviewTitle, company, joinUrl } = params;
+  const interviewTitle = escapeHtml(params.interviewTitle);
+  const company = escapeHtml(params.company);
+  // joinUrl is derived from a server-generated shareToken — escape as defence-in-depth
+  const joinUrl = escapeHtml(params.joinUrl);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

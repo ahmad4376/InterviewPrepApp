@@ -18,7 +18,9 @@ export async function GET(request: Request) {
 
   await connectDB();
 
-  const filter = search ? { email: { $regex: search, $options: "i" } } : {};
+  // Escape regex metacharacters to prevent ReDoS attacks
+  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const filter = escapedSearch ? { email: { $regex: escapedSearch, $options: "i" } } : {};
 
   const [users, total] = await Promise.all([
     User.find(filter)
