@@ -55,7 +55,7 @@ spec:
             failureThreshold: 2
           env:
             - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-              value: pk_test_c3BlY2lhbC1saW9uZmlzaC03NC5jbGVyay5hY2NvdW50cy5kZXYk
+              value: pk_live_Y2xlcmsuaW50ZXJ2aWV3cHJlcC5zdHVkaW8k
             - name: CLERK_SECRET_KEY
               valueFrom:
                 secretKeyRef:
