@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
 import { generateFeedback, generateScoreSummary, evaluateHRInterview } from "app/lib/openai";
+import { encryptField, decryptField } from "app/lib/encryption";
 import type { QuestionScore } from "app/lib/types";
 import Interview from "app/models/Interview";
 import type { TranscriptEntry } from "app/models/Interview";
@@ -31,7 +32,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
 
-  return NextResponse.json(interview);
+  // Decrypt sensitive fields before returning
+  const decryptedTranscriptRaw = decryptField(interview.transcript as unknown as string);
+  const decryptedResumeDataRaw = decryptField(interview.resumeData as unknown as string);
+
+  const decryptedInterview = {
+    ...interview,
+    transcript: decryptedTranscriptRaw
+      ? (JSON.parse(decryptedTranscriptRaw) as TranscriptEntry[])
+      : interview.transcript,
+    resumeData: decryptedResumeDataRaw ? JSON.parse(decryptedResumeDataRaw) : interview.resumeData,
+  };
+
+  return NextResponse.json(decryptedInterview);
 }
 
 const ALLOWED_STATUSES = ["scheduled", "in-progress", "completed"] as const;
@@ -220,9 +233,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
     }
 
+    const encryptedTranscript = encryptField(JSON.stringify(transcript));
+
     const updated = await Interview.findOneAndUpdate(
       { _id: id, userId },
-      { status, transcript, feedback },
+      { status, transcript: encryptedTranscript, feedback },
       { new: true },
     );
 

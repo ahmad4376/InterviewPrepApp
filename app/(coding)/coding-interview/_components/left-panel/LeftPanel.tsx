@@ -16,9 +16,11 @@ interface LeftPanelProps {
   lastAction: "run" | "submit" | null;
   language: Language;
   code: string;
+  /** When true, hides the Solution tab (used in structured coding interviews). */
+  hideSolution?: boolean;
 }
 
-const tabs: { key: LeftPanelTab; label: string }[] = [
+const ALL_TABS: { key: LeftPanelTab; label: string }[] = [
   { key: "description", label: "Description" },
   { key: "solution", label: "Solution" },
   { key: "submissions", label: "Submissions" },
@@ -33,7 +35,9 @@ export default function LeftPanel({
   lastAction,
   language,
   code,
+  hideSolution = false,
 }: LeftPanelProps) {
+  const tabs = hideSolution ? ALL_TABS.filter((t) => t.key !== "solution") : ALL_TABS;
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Tab bar */}
@@ -64,6 +68,7 @@ export default function LeftPanel({
             lastAction={lastAction}
             language={language}
             code={code}
+            problemId={problem.id ?? ""}
           />
         )}
       </div>

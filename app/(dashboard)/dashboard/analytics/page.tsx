@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { BarChart3, Users, CheckCircle, TrendingUp } from "lucide-react";
 import VolumeChart from "app/components/analytics/VolumeChart";
@@ -43,38 +43,55 @@ export default function AnalyticsPage() {
     completed: 0,
   });
   const [loading, setLoading] = useState(true);
-
-  const fetchAnalytics = useCallback(async (orgId: string, dayRange: number) => {
-    setLoading(true);
-    try {
-      const [summaryRes, volumeRes, scoresRes, pipelineRes] = await Promise.all([
-        fetch(`/api/organizations/${orgId}/analytics/summary`),
-        fetch(`/api/organizations/${orgId}/analytics/volume?days=${dayRange}`),
-        fetch(`/api/organizations/${orgId}/analytics/scores?days=${dayRange}`),
-        fetch(`/api/organizations/${orgId}/analytics/pipeline`),
-      ]);
-      const [s, v, sc, p] = await Promise.all([
-        summaryRes.json(),
-        volumeRes.json(),
-        scoresRes.json(),
-        pipelineRes.json(),
-      ]);
-      setSummary(s);
-      setVolumeData(v);
-      setScoreData(sc);
-      setPipelineData(p);
-    } catch (err) {
-      console.error("Failed to fetch analytics:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (organization?.id) {
-      fetchAnalytics(organization.id, days);
-    }
-  }, [organization?.id, days, fetchAnalytics]);
+    if (!organization?.id) return;
+
+    // Abort any in-flight request from a previous render
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
+
+    const orgId = organization.id;
+
+    setLoading(true);
+
+    (async () => {
+      try {
+        const [summaryRes, volumeRes, scoresRes, pipelineRes] = await Promise.all([
+          fetch(`/api/organizations/${orgId}/analytics/summary`, { signal }),
+          fetch(`/api/organizations/${orgId}/analytics/volume?days=${days}`, { signal }),
+          fetch(`/api/organizations/${orgId}/analytics/scores?days=${days}`, { signal }),
+          fetch(`/api/organizations/${orgId}/analytics/pipeline`, { signal }),
+        ]);
+
+        if (signal.aborted) return;
+
+        const [s, v, sc, p] = await Promise.all([
+          summaryRes.json(),
+          volumeRes.json(),
+          scoresRes.json(),
+          pipelineRes.json(),
+        ]);
+
+        if (signal.aborted) return;
+
+        setSummary(s);
+        setVolumeData(v);
+        setScoreData(sc);
+        setPipelineData(p);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        console.error("Failed to fetch analytics:", err);
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+  }, [organization?.id, days]);
 
   if (!orgLoaded || subLoading) {
     return (

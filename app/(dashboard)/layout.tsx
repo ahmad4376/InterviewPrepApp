@@ -16,7 +16,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Mic,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSubscription } from "app/hooks/useSubscription";
@@ -32,6 +31,7 @@ import {
 } from "@/app/components/ui/breadcrumb";
 import { useBreadcrumbs } from "@/app/hooks/useBreadcrumbs";
 import { cn } from "@/app/lib/cn";
+import Logo from "@/app/components/landing/Logo";
 import {
   Tooltip,
   TooltipContent,
@@ -159,9 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             collapsed && "justify-center px-2",
           )}
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Mic className="h-4 w-4" />
-          </div>
+          <Logo size={28} className="shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.span
@@ -283,9 +281,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <div className="flex h-14 items-center justify-between px-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <Mic className="h-4 w-4" />
-                  </div>
+                  <Logo size={28} />
                   <span className="font-semibold text-sm text-foreground">InterviewPrepApp</span>
                 </div>
                 <button

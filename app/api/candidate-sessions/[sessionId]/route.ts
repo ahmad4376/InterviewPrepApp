@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
 import { generateFeedback, generateScoreSummary, evaluateHRInterview } from "app/lib/openai";
+import { encryptField, decryptField } from "app/lib/encryption";
 import type { QuestionScore } from "app/lib/types";
 import CandidateSession from "app/models/CandidateSession";
 import Interview from "app/models/Interview";
@@ -49,7 +50,19 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json(session);
+  // Decrypt sensitive fields before returning
+  const decryptedTranscriptRaw = decryptField(session.transcript as unknown as string);
+  const decryptedEmailRaw = decryptField(session.candidateEmail as unknown as string);
+
+  const decryptedSession = {
+    ...session,
+    transcript: decryptedTranscriptRaw
+      ? (JSON.parse(decryptedTranscriptRaw) as TranscriptEntry[])
+      : session.transcript,
+    candidateEmail: decryptedEmailRaw ?? session.candidateEmail,
+  };
+
+  return NextResponse.json(decryptedSession);
 }
 
 const ALLOWED_STATUSES = ["scheduled", "in-progress", "completed"] as const;
@@ -197,7 +210,12 @@ export async function PATCH(
       }
     }
 
-    await CandidateSession.findOneAndUpdate({ _id: sessionId }, { status, transcript, feedback });
+    const encryptedTranscript = encryptField(JSON.stringify(transcript));
+
+    await CandidateSession.findOneAndUpdate(
+      { _id: sessionId },
+      { status, transcript: encryptedTranscript, feedback },
+    );
 
     return NextResponse.json({ success: true, status });
   }

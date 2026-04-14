@@ -1,64 +1,104 @@
+"use client";
+
 import { SignIn } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
 import Link from "next/link";
+import Logo from "@/app/components/landing/Logo";
+
+function getClerkAppearance(dark: boolean) {
+  return dark
+    ? {
+        variables: {
+          colorPrimary: "#3ecf8e",
+          colorBackground: "#0d0d14",
+          colorInputBackground: "#09090f",
+          colorText: "#fafafa",
+          colorTextSecondary: "#9c9caa",
+          colorDanger: "#f87171",
+          borderRadius: "0.6rem",
+          fontFamily: "inherit",
+        },
+        elements: {
+          card: "shadow-2xl border border-white/[0.06]",
+          formButtonPrimary:
+            "bg-[#3ecf8e] text-[#09090f] hover:bg-[#38c480] font-semibold transition-colors",
+          socialButtonsBlockButton:
+            "border-white/10 bg-white/5 text-[#fafafa] hover:bg-white/10 transition-colors",
+          formFieldInput: "bg-[#09090f] border-white/10 text-[#fafafa] focus:border-[#3ecf8e]/50",
+          footerActionLink: "text-[#3ecf8e] hover:text-[#38c480]",
+          identityPreviewEditButton: "text-[#3ecf8e]",
+        },
+      }
+    : {
+        variables: {
+          colorPrimary: "#0fb860",
+          colorBackground: "#ffffff",
+          colorInputBackground: "#f9fafb",
+          colorText: "#09090f",
+          colorTextSecondary: "#6b7280",
+          colorDanger: "#dc2626",
+          borderRadius: "0.6rem",
+          fontFamily: "inherit",
+        },
+        elements: {
+          card: "shadow-xl border border-gray-200",
+          formButtonPrimary:
+            "bg-[#0fb860] text-white hover:bg-[#0ea854] font-semibold transition-colors",
+          socialButtonsBlockButton:
+            "border-gray-200 bg-white text-gray-900 hover:bg-gray-50 transition-colors",
+          formFieldInput: "bg-white border-gray-200 text-gray-900 focus:border-[#0fb860]/50",
+          footerActionLink: "text-[#0fb860] hover:text-[#0ea854]",
+          identityPreviewEditButton: "text-[#0fb860]",
+        },
+      };
+}
 
 export default function SignInPage() {
+  const { resolvedTheme } = useTheme();
+  const dark = resolvedTheme !== "light";
+
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Gradient Background */}
-      <div
-        className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
-        aria-hidden="true"
-      >
+    <div className="relative min-h-screen flex flex-col bg-background overflow-hidden">
+      {/* Background gradient orbs */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Green orb — top right */}
+        <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-accent/20 blur-[120px]" />
+        {/* Purple orb — bottom left */}
+        <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/15 blur-[140px]" />
+        {/* Subtle grid overlay */}
         <div
-          className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-accent opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            clipPath:
-              "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
+            backgroundImage:
+              "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
           }}
         />
       </div>
 
       {/* Header */}
-      <div className="relative z-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-accent">InterviewPrepApp</span>
-          </Link>
-        </div>
-      </div>
+      <header className="relative z-10 flex items-center h-16 px-6 sm:px-10">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <Logo size={32} />
+          <span className="font-semibold text-foreground">InterviewPrepApp</span>
+        </Link>
+      </header>
 
-      {/* Sign In Form */}
-      <div className="relative z-10 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back</h2>
-            <p className="text-muted-foreground">Sign in to your account to continue</p>
+      {/* Main content */}
+      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-10">
+        <div className="w-full max-w-[420px]">
+          {/* Heading */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Sign in to continue your interview prep
+            </p>
           </div>
 
-          <SignIn
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "bg-card border border-border shadow-2xl rounded-lg",
-                headerTitle: "text-foreground",
-                headerSubtitle: "text-muted-foreground",
-                socialButtonsBlockButton:
-                  "bg-muted border border-border text-foreground hover:bg-muted/80",
-                socialButtonsBlockButtonText: "text-foreground font-medium",
-                formButtonPrimary:
-                  "bg-primary hover:bg-primary/90 text-primary-foreground font-semibold",
-                formFieldInput: "bg-background border border-input text-foreground",
-                formFieldLabel: "text-muted-foreground",
-                footerActionLink: "text-primary hover:text-primary/80",
-                identityPreviewText: "text-foreground",
-                identityPreviewEditButton: "text-primary",
-                formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
-                otpCodeFieldInput: "bg-background border border-input text-foreground",
-              },
-            }}
-          />
+          {/* Clerk form */}
+          <SignIn appearance={getClerkAppearance(dark)} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

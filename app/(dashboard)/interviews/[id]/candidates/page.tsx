@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/app/components/ui/data-table";
 import { Card } from "@/app/components/ui/card";
+import { InviteByEmailDialog } from "@/app/components/InviteByEmailDialog";
 
 interface CandidateRow {
   _id: string;
@@ -48,15 +49,21 @@ export default function CandidatesPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
+  const [interviewTitle, setInterviewTitle] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch(`/api/interviews/${id}/candidates`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setCandidates(data);
+    Promise.all([
+      fetch(`/api/interviews/${id}/candidates`).then((res) => res.json()),
+      fetch(`/api/interviews/${id}`).then((res) => res.json()),
+    ])
+      .then(([candidatesData, interviewData]) => {
+        if (Array.isArray(candidatesData)) setCandidates(candidatesData);
+        if (interviewData && typeof interviewData.title === "string") {
+          setInterviewTitle(interviewData.title);
+        }
       })
       .catch(() => {
         toast.error("Failed to load candidates");
@@ -160,6 +167,7 @@ export default function CandidatesPage() {
               </>
             )}
           </Button>
+          <InviteByEmailDialog interviewId={id} interviewTitle={interviewTitle} />
         </div>
       </PageHeader>
 

@@ -18,11 +18,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin = request.headers.get("origin") ?? "http://localhost:3000";
+  // Prefer an explicit app URL env var so the return_url is correct even when
+  // the `origin` header is stripped by a load balancer or reverse proxy.
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL || request.headers.get("origin") || "http://localhost:3000";
 
   const session = await getStripe().billingPortal.sessions.create({
     customer: user.stripeCustomerId,
-    return_url: `${origin}/billing`,
+    return_url: `${appUrl}/billing`,
   });
 
   return NextResponse.json({ url: session.url });

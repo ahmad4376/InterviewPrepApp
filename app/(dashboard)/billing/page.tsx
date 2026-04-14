@@ -80,6 +80,7 @@ export default function BillingPage() {
   const { tier, usage, limits, cancelAtPeriodEnd, isLoading, isFree } = useSubscription();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   async function handleUpgrade(targetTier: "pro" | "business") {
     setLoadingTier(targetTier);
@@ -104,16 +105,17 @@ export default function BillingPage() {
 
   async function handleManageBilling() {
     setPortalLoading(true);
+    setPortalError(null);
     try {
       const res = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        console.error("Portal error:", data.error);
+        setPortalError(data.error ?? "Could not open billing portal. Please try again.");
       }
-    } catch (err) {
-      console.error("Portal failed:", err);
+    } catch {
+      setPortalError("Could not open billing portal. Please check your connection and try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -157,6 +159,13 @@ export default function BillingPage() {
           </Button>
         )}
       </PageHeader>
+
+      {/* Portal error banner */}
+      {portalError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {portalError}
+        </div>
+      )}
 
       {/* Status banners */}
       {showSuccess && (

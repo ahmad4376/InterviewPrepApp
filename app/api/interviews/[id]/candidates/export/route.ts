@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
+import { decryptField } from "app/lib/encryption";
 import Interview from "app/models/Interview";
 import CandidateSession from "app/models/CandidateSession";
 import type { InterviewFeedback } from "app/models/Interview";
@@ -62,9 +63,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const rows = sessions.map((s) => {
     const fb = s.feedback as InterviewFeedback | null;
+    const email = decryptField(s.candidateEmail as string) ?? s.candidateEmail;
     return [
       `"${s.candidateName.replace(/"/g, '""')}"`,
-      `"${s.candidateEmail.replace(/"/g, '""')}"`,
+      `"${email.replace(/"/g, '""')}"`,
       fb?.overallScore?.toFixed(1) ?? "",
       fb?.aggregateScores?.correctness?.toFixed(1) ?? "",
       fb?.aggregateScores?.depth?.toFixed(1) ?? "",

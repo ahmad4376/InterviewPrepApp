@@ -21,6 +21,8 @@ export interface IUser extends Document {
   stripeCustomerId: string | null;
   subscription: ISubscription;
   resumeData: Record<string, unknown> | null;
+  jobTitle: string;
+  bio: string;
   teamId: string | null;
   teamRole: TeamRole | null;
   createdAt: Date;
@@ -55,6 +57,8 @@ const userSchema = new Schema<IUser>(
     stripeCustomerId: { type: String },
     subscription: { type: subscriptionSchema, default: () => ({}) },
     resumeData: { type: Schema.Types.Mixed, default: null },
+    jobTitle: { type: String, default: "" },
+    bio: { type: String, default: "" },
     teamId: { type: String, default: null },
     teamRole: {
       type: String,

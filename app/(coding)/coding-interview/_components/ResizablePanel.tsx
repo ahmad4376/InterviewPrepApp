@@ -51,12 +51,12 @@ export default function ResizablePanel({
       <div
         className={`${
           isH ? "w-1 hover:w-1.5 cursor-col-resize" : "h-1 hover:h-1.5 cursor-row-resize"
-        } bg-gray-700 hover:bg-[#3ecf8e] transition-all duration-150 relative group flex-shrink-0 ${
-          isDragging ? "bg-[#3ecf8e]" : ""
+        } bg-border hover:bg-accent transition-all duration-150 relative group flex-shrink-0 ${
+          isDragging ? "bg-accent" : ""
         }`}
         onMouseDown={handleMouseDown}
       >
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-white">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-accent-foreground">
           <GripVertical className={`w-4 h-4 ${isH ? "" : "rotate-90"}`} />
         </div>
       </div>

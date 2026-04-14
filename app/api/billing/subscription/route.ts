@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUserId } from "app/lib/auth";
 import { getSubscriptionSummary } from "app/lib/subscription/gate";
+import { withCache } from "app/lib/redis";
 
 export async function GET() {
   const userId = await getAuthUserId();
@@ -8,6 +9,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const summary = await getSubscriptionSummary(userId);
+  const summary = await withCache(`sub:${userId}`, 60, () => getSubscriptionSummary(userId));
   return NextResponse.json(summary);
 }

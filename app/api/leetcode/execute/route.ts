@@ -4,6 +4,7 @@ import { getAuthUserId } from "app/lib/auth";
 import { Problem } from "app/models/LeetcodeQuestion";
 import CodingInterview from "app/models/CodingInterview";
 import Submission from "app/models/Submission";
+import { getRedis } from "app/lib/redis";
 
 /** Maps frontend language names to Piston language identifiers */
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -384,26 +385,42 @@ export async function POST(request: NextRequest) {
       try {
         const userId = await getAuthUserId();
 
-        // Save to CodingInterview if part of a session
-        if (codingInterviewId && userId) {
-          const interview = await CodingInterview.findById(codingInterviewId);
-          if (interview && interview.userId === userId) {
-            const sub = interview.submissions.find((s) => s.problemId === problemId);
-            if (sub) {
-              sub.language = language;
-              sub.code = code;
-              sub.status = submissionStatus;
-              sub.testsPassed = totalPassed;
-              sub.testsTotal = totalTests;
-              sub.runtime = avgTime;
-              sub.submittedAt = new Date();
+        if (!userId) {
+          console.warn("[SAVE SUBMISSION] No authenticated user — submission not saved.");
+        } else {
+          // Save to CodingInterview if part of a session
+          if (codingInterviewId) {
+            const interview = await CodingInterview.findById(codingInterviewId);
+            if (!interview) {
+              console.warn(`[SAVE SUBMISSION] CodingInterview ${codingInterviewId} not found.`);
+            } else if (interview.userId !== userId) {
+              console.warn(
+                `[SAVE SUBMISSION] userId mismatch: interview.userId=${interview.userId} auth=${userId}`,
+              );
+            } else {
+              const sub = interview.submissions.find((s) => s.problemId === problemId);
+              if (!sub) {
+                console.warn(
+                  `[SAVE SUBMISSION] No submission slot for problemId=${problemId} in interview ${codingInterviewId}. ` +
+                    `Available slots: ${interview.submissions.map((s) => s.problemId).join(", ")}`,
+                );
+              } else {
+                sub.language = language;
+                sub.code = code;
+                sub.status = submissionStatus;
+                sub.testsPassed = totalPassed;
+                sub.testsTotal = totalTests;
+                sub.runtime = avgTime;
+                sub.submittedAt = new Date();
+                await interview.save();
+                console.log(
+                  `[SAVE SUBMISSION] Saved to CodingInterview ${codingInterviewId} problemId=${problemId} status=${submissionStatus}`,
+                );
+              }
             }
-            await interview.save();
           }
-        }
 
-        // Always save to standalone Submission for the problem browser
-        if (userId) {
+          // Always save to standalone Submission for the problem browser history
           await Submission.create({
             userId,
             problemId,
@@ -414,6 +431,20 @@ export async function POST(request: NextRequest) {
             testsTotal: totalTests,
             runtime: avgTime,
           });
+          console.log(
+            `[SAVE SUBMISSION] Saved standalone Submission userId=${userId} problemId=${problemId} status=${submissionStatus}`,
+          );
+
+          // Bust cached status map and problem submission history so the
+          // problem browser and submissions tab reflect the new result immediately.
+          try {
+            await Promise.all([
+              getRedis().del(`submissions:statusmap:${userId}`),
+              getRedis().del(`submissions:history:${userId}:${problemId}`),
+            ]);
+          } catch {
+            // Redis unavailable — cache will expire naturally via TTL
+          }
         }
       } catch (saveErr) {
         // Don't fail the execution response if saving fails

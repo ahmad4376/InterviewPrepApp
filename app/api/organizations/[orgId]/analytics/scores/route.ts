@@ -3,6 +3,7 @@ import { getAuthContext } from "app/lib/auth";
 import { canViewAnalytics } from "app/lib/permissions";
 import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
+import { withCache } from "app/lib/redis";
 
 export async function GET(request: Request, { params }: { params: Promise<{ orgId: string }> }) {
   const { userId, orgId: activeOrgId, orgRole } = await getAuthContext();
@@ -21,40 +22,42 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgI
 
   await connectDB();
 
-  const data = await Interview.aggregate([
-    {
-      $match: {
-        organizationId: orgId,
-        status: "completed",
-        "feedback.overallScore": { $exists: true },
-        createdAt: { $gte: from },
-      },
-    },
-    {
-      $group: {
-        _id: {
-          $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+  const data = await withCache(`analytics:${orgId}:scores:${days}`, 300, () =>
+    Interview.aggregate([
+      {
+        $match: {
+          organizationId: orgId,
+          status: "completed",
+          "feedback.overallScore": { $exists: true },
+          createdAt: { $gte: from },
         },
-        avgOverall: { $avg: "$feedback.overallScore" },
-        avgCorrectness: { $avg: "$feedback.aggregateScores.correctness" },
-        avgDepth: { $avg: "$feedback.aggregateScores.depth" },
-        avgCommunication: { $avg: "$feedback.aggregateScores.communication" },
-        count: { $sum: 1 },
       },
-    },
-    { $sort: { _id: 1 } },
-    {
-      $project: {
-        _id: 0,
-        date: "$_id",
-        overall: { $round: ["$avgOverall", 1] },
-        correctness: { $round: ["$avgCorrectness", 1] },
-        depth: { $round: ["$avgDepth", 1] },
-        communication: { $round: ["$avgCommunication", 1] },
-        count: 1,
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          avgOverall: { $avg: "$feedback.overallScore" },
+          avgCorrectness: { $avg: "$feedback.aggregateScores.correctness" },
+          avgDepth: { $avg: "$feedback.aggregateScores.depth" },
+          avgCommunication: { $avg: "$feedback.aggregateScores.communication" },
+          count: { $sum: 1 },
+        },
       },
-    },
-  ]);
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id",
+          overall: { $round: ["$avgOverall", 1] },
+          correctness: { $round: ["$avgCorrectness", 1] },
+          depth: { $round: ["$avgDepth", 1] },
+          communication: { $round: ["$avgCommunication", 1] },
+          count: 1,
+        },
+      },
+    ]),
+  );
 
   return NextResponse.json(data);
 }

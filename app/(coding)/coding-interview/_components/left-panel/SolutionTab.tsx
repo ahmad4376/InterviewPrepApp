@@ -41,7 +41,7 @@ export default function SolutionTab({ problem }: SolutionTabProps) {
         ))}
       </div>
 
-      <div className="rounded-lg bg-[#0d1117] border border-border overflow-hidden">
+      <div className="rounded-lg bg-muted/50 dark:bg-[#0d1117] border border-border overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/20">
           <span className="text-xs text-muted-foreground font-mono">
             {solutionLang === "cpp"

@@ -100,3 +100,38 @@ spec:
                   key: STRIPE_PRICE_BUSINESS_MONTHLY
             - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
               value: pk_test_51TGfwjAhtxv7VVNZtg7VD3sy3YnNYZeaYBO5aMRFWcvqdXRb7EgKWj3xWQlrjnqMUE2E4ynPM0TR0SWC7vAX2okQ00djX1tlio
+            - name: CLERK_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: CLERK_WEBHOOK_SECRET
+            - name: UPSTASH_REDIS_REST_URL
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: UPSTASH_REDIS_REST_URL
+            - name: UPSTASH_REDIS_REST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: UPSTASH_REDIS_REST_TOKEN
+            - name: ADMIN_USER_IDS
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: ADMIN_USER_IDS
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: ENCRYPTION_KEY
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: RESEND_API_KEY
+            - name: PISTON_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: interview-prep-secrets
+                  key: PISTON_API_URL

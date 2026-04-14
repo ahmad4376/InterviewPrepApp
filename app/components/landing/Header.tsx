@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import { Menu, X, Mic } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/app/components/ui/theme-toggle";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/cn";
+import Logo from "./Logo";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -45,9 +46,7 @@ export default function Header() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Mic className="h-4 w-4" />
-          </div>
+          <Logo size={28} />
           <span className="font-semibold text-sm text-foreground">InterviewPrepApp</span>
         </Link>
 

@@ -52,6 +52,15 @@ export async function POST(request: Request) {
       break;
     }
 
+    case "user.updated": {
+      const { id, email_addresses } = event.data;
+      const email = email_addresses?.[0]?.email_address;
+      if (id && email) {
+        await User.findOneAndUpdate({ clerkId: id }, { email });
+      }
+      break;
+    }
+
     case "user.deleted": {
       const { id } = event.data;
       if (id) {

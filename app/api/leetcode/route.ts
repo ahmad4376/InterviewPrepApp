@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "app/lib/mongodb";
 import { Problem } from "app/models/LeetcodeQuestion";
+import { withCache } from "app/lib/redis";
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,18 +48,20 @@ export async function GET(request: NextRequest) {
         problem_format: 1,
       };
 
-      const [problems, total] = await Promise.all([
-        Problem.find(filter, projection).sort({ title: 1 }).skip(skip).limit(pageSize).lean(),
-        Problem.countDocuments(filter),
-      ]);
+      const cacheKey = `problems:list:${page}:${difficulty ?? ""}:${tag ?? ""}:${format ?? ""}:${search ?? ""}:${pageSize}`;
+      const result = await withCache(cacheKey, 3600, async () => {
+        const [problems, total] = await Promise.all([
+          Problem.find(filter, projection).sort({ title: 1 }).skip(skip).limit(pageSize).lean(),
+          Problem.countDocuments(filter),
+        ]);
+        return { success: true, data: problems, total, page: page || 1, pageSize };
+      });
 
-      return NextResponse.json(
-        { success: true, data: problems, total, page: page || 1, pageSize },
-        { status: 200 },
-      );
+      return NextResponse.json(result, { status: 200 });
     }
 
-    const problems = await Problem.find(filter);
+    const cacheKey = `problems:list:all:${difficulty ?? ""}:${tag ?? ""}:${format ?? ""}:${search ?? ""}`;
+    const problems = await withCache(cacheKey, 3600, () => Problem.find(filter).lean());
 
     return NextResponse.json({ success: true, data: problems }, { status: 200 });
   } catch (error) {

@@ -3,18 +3,24 @@ import { getAuthContext } from "app/lib/auth";
 import { canManageTeam } from "app/lib/permissions";
 import { connectDB } from "app/lib/mongodb";
 import Organization from "app/models/Organization";
+import { withCache, getRedis } from "app/lib/redis";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await params;
 
   await connectDB();
-  const org = await Organization.findOne({ clerkOrgId: orgId });
 
-  if (!org) {
-    return NextResponse.json({ branding: null });
-  }
+  // Branding is fetched on every public /join/[token] page load — cache aggressively.
+  const branding = await withCache(
+    `org:${orgId}:branding`,
+    300, // 5 min — invalidated when branding is updated
+    async () => {
+      const org = await Organization.findOne({ clerkOrgId: orgId }).select("branding").lean();
+      return org?.branding ?? null;
+    },
+  );
 
-  return NextResponse.json({ branding: org.branding });
+  return NextResponse.json({ branding });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ orgId: string }> }) {
@@ -65,6 +71,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
     { $set: update },
     { new: true, upsert: true },
   );
+
+  // Bust branding cache so join pages reflect the update immediately.
+  try {
+    await getRedis().del(`org:${orgId}:branding`);
+  } catch {
+    // Redis unavailable — cache will expire naturally via TTL
+  }
 
   return NextResponse.json({ branding: org.branding });
 }

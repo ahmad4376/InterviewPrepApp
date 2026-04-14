@@ -3,6 +3,7 @@ import { getStripe } from "app/lib/stripe";
 import { connectDB } from "app/lib/mongodb";
 import { getTierFromPriceId } from "app/lib/subscription/tiers";
 import User from "app/models/User";
+import { getRedis } from "app/lib/redis";
 import type Stripe from "stripe";
 
 /** Extract period dates from a subscription's first item */
@@ -72,6 +73,11 @@ export async function POST(request: Request) {
             "subscription.cancelAtPeriodEnd": subscription.cancel_at_period_end,
           },
         );
+        try {
+          await getRedis().del(`sub:${clerkId}`);
+        } catch {
+          /* Redis unavailable */
+        }
       }
       break;
     }
@@ -102,13 +108,24 @@ export async function POST(request: Request) {
         update["subscription.stripePriceId"] = priceId;
       }
 
-      await User.findOneAndUpdate({ stripeCustomerId: subscription.customer as string }, update);
+      const updatedUser = await User.findOneAndUpdate(
+        { stripeCustomerId: subscription.customer as string },
+        update,
+        { new: true },
+      );
+      if (updatedUser?.clerkId) {
+        try {
+          await getRedis().del(`sub:${updatedUser.clerkId}`);
+        } catch {
+          /* Redis unavailable */
+        }
+      }
       break;
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      await User.findOneAndUpdate(
+      const deletedUser = await User.findOneAndUpdate(
         { stripeCustomerId: subscription.customer as string },
         {
           "subscription.tier": "free",
@@ -117,7 +134,15 @@ export async function POST(request: Request) {
           "subscription.stripePriceId": null,
           "subscription.cancelAtPeriodEnd": false,
         },
+        { new: true },
       );
+      if (deletedUser?.clerkId) {
+        try {
+          await getRedis().del(`sub:${deletedUser.clerkId}`);
+        } catch {
+          /* Redis unavailable */
+        }
+      }
       break;
     }
 
@@ -125,10 +150,18 @@ export async function POST(request: Request) {
       const invoice = event.data.object as Stripe.Invoice;
       const subId = getInvoiceSubscriptionId(invoice);
       if (subId) {
-        await User.findOneAndUpdate(
+        const failedUser = await User.findOneAndUpdate(
           { stripeCustomerId: invoice.customer as string },
           { "subscription.status": "past_due" },
+          { new: true },
         );
+        if (failedUser?.clerkId) {
+          try {
+            await getRedis().del(`sub:${failedUser.clerkId}`);
+          } catch {
+            /* Redis unavailable */
+          }
+        }
       }
       break;
     }
@@ -137,13 +170,21 @@ export async function POST(request: Request) {
       const invoice = event.data.object as Stripe.Invoice;
       const subId = getInvoiceSubscriptionId(invoice);
       if (subId) {
-        await User.findOneAndUpdate(
+        const paidUser = await User.findOneAndUpdate(
           {
             stripeCustomerId: invoice.customer as string,
             "subscription.status": "past_due",
           },
           { "subscription.status": "active" },
+          { new: true },
         );
+        if (paidUser?.clerkId) {
+          try {
+            await getRedis().del(`sub:${paidUser.clerkId}`);
+          } catch {
+            /* Redis unavailable */
+          }
+        }
       }
       break;
     }

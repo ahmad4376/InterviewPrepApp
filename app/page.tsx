@@ -9,6 +9,10 @@ import FAQ from "./components/landing/FAQ";
 import CTA from "./components/landing/CTA";
 import Footer from "./components/landing/Footer";
 
+// Landing page has no user-specific data — cache at the Next.js level for 1 hour.
+// Next.js will serve it from its edge cache without hitting your server.
+export const revalidate = 3600;
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">

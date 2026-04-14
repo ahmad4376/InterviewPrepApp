@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import ErrorBoundary from "../../components/ErrorBoundary";
 import EditInterviewModal from "../../components/EditInterviewModal";
@@ -21,6 +22,8 @@ import {
   Code2,
   Timer,
   List,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
@@ -124,9 +127,49 @@ function SkeletonCard() {
   );
 }
 
+const PAGE_SIZE = 10;
+const DASHBOARD_LS_KEY = "dashboard_items_cache";
+const DASHBOARD_CACHE_TTL_MS = 60 * 1000; // 1 minute — short enough to stay fresh
+
+interface DashboardCache {
+  items: DashboardItem[];
+  cachedAt: number;
+}
+
+function readDashboardCache(): DashboardItem[] | null {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_LS_KEY);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as DashboardCache;
+    if (Date.now() - entry.cachedAt > DASHBOARD_CACHE_TTL_MS) return null;
+    return entry.items;
+  } catch {
+    return null;
+  }
+}
+
+function writeDashboardCache(items: DashboardItem[]) {
+  try {
+    const entry: DashboardCache = { items, cachedAt: Date.now() };
+    localStorage.setItem(DASHBOARD_LS_KEY, JSON.stringify(entry));
+  } catch {
+    // storage full — ignore
+  }
+}
+
 function DashboardContent() {
-  const [items, setItems] = useState<DashboardItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [items, setItems] = useState<DashboardItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    return readDashboardCache() ?? [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return readDashboardCache() === null;
+  });
+  const hasLoadedRef = useRef(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -140,6 +183,17 @@ function DashboardContent() {
     description: string;
   } | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+
+  const navigateToPage = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", String(page));
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   const handleCopyLink = async (token: string) => {
     try {
@@ -155,10 +209,14 @@ function DashboardContent() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/interviews").then((r) => r.json()),
+      fetch("/api/interviews?limit=100").then((r) => r.json()),
       fetch("/api/coding-interviews").then((r) => r.json()),
     ])
-      .then(([voiceData, codingData]) => {
+      .then(([voiceResponse, codingData]) => {
+        // API returns { interviews, total, page, totalPages }
+        const voiceData: Interview[] = Array.isArray(voiceResponse)
+          ? voiceResponse
+          : (voiceResponse.interviews ?? []);
         const voiceItems: DashboardItem[] = (voiceData as Interview[]).map((i) => ({
           _id: i._id,
           title: i.title,
@@ -181,13 +239,20 @@ function DashboardContent() {
           numProblems: c.numProblems,
           timeLimit: c.timeLimit,
         }));
-        setItems([...voiceItems, ...codingItems]);
+        const merged = [...voiceItems, ...codingItems];
+        setItems(merged);
+        writeDashboardCache(merged);
       })
       .catch(() => {
-        setItems([]);
+        if (!hasLoadedRef.current) setItems([]);
         toast.error("Failed to load interviews");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!hasLoadedRef.current) {
+          hasLoadedRef.current = true;
+          setLoading(false);
+        }
+      });
   }, []);
 
   const handleDelete = async (id: string, type: "voice" | "coding") => {
@@ -197,7 +262,11 @@ function DashboardContent() {
     try {
       const res = await fetch(endpoint, { method: "DELETE" });
       if (res.ok) {
-        setItems((prev) => prev.filter((i) => i._id !== id));
+        setItems((prev) => {
+          const next = prev.filter((i) => i._id !== id);
+          writeDashboardCache(next);
+          return next;
+        });
         toast.success("Interview deleted");
       } else {
         toast.error("Failed to delete interview");
@@ -237,11 +306,13 @@ function DashboardContent() {
     company: string;
     description: string;
   }) => {
-    setItems((prev) =>
-      prev.map((i) =>
+    setItems((prev) => {
+      const next = prev.map((i) =>
         i._id === updated._id ? { ...i, title: updated.title, company: updated.company } : i,
-      ),
-    );
+      );
+      writeDashboardCache(next);
+      return next;
+    });
     setEditingInterview(null);
     toast.success("Interview updated");
   };
@@ -274,6 +345,13 @@ function DashboardContent() {
         }
       });
   }, [items, statusFilter, searchQuery, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedInterviews = filteredInterviews.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
 
   if (loading) {
     return (
@@ -329,17 +407,32 @@ function DashboardContent() {
             startIcon={<Search />}
             endIcon={
               searchQuery ? (
-                <button onClick={() => setSearchQuery("")} aria-label="Clear search">
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    navigateToPage(1);
+                  }}
+                  aria-label="Clear search"
+                >
                   <X className="h-4 w-4" />
                 </button>
               ) : undefined
             }
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              navigateToPage(1);
+            }}
             placeholder="Search by title or company..."
             className="flex-1"
           />
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => {
+              setSortBy(v as SortBy);
+              navigateToPage(1);
+            }}
+          >
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -358,7 +451,10 @@ function DashboardContent() {
           {STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
+              onClick={() => {
+                setStatusFilter(opt.value);
+                navigateToPage(1);
+              }}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 statusFilter === opt.value
@@ -384,6 +480,7 @@ function DashboardContent() {
               onClick={() => {
                 setSearchQuery("");
                 setStatusFilter("all");
+                navigateToPage(1);
               }}
             >
               Clear filters
@@ -392,7 +489,7 @@ function DashboardContent() {
         />
       ) : (
         <div className="space-y-3">
-          {filteredInterviews.map((item) => {
+          {paginatedInterviews.map((item) => {
             const isConfirming = confirmDeleteId === item._id;
             const isDeleting = deletingId === item._id;
             const isLoadingEdit = loadingEditId === item._id;
@@ -597,6 +694,35 @@ function DashboardContent() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredInterviews.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigateToPage(safePage - 1)}
+            disabled={safePage <= 1}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {safePage} of {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigateToPage(safePage + 1)}
+            disabled={safePage >= totalPages}
+            aria-label="Next page"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       )}
 

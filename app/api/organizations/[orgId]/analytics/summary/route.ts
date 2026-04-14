@@ -3,6 +3,7 @@ import { getAuthContext } from "app/lib/auth";
 import { canViewAnalytics } from "app/lib/permissions";
 import { connectDB } from "app/lib/mongodb";
 import Interview from "app/models/Interview";
+import { withCache } from "app/lib/redis";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ orgId: string }> }) {
   const { userId, orgId: activeOrgId, orgRole } = await getAuthContext();
@@ -17,11 +18,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ org
 
   await connectDB();
 
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const summary = await withCache(`analytics:${orgId}:summary:0`, 300, async () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [totalInterviews, completedInterviews, recentInterviews, avgScoreResult, totalCandidates] =
-    await Promise.all([
+    const [
+      totalInterviews,
+      completedInterviews,
+      recentInterviews,
+      avgScoreResult,
+      totalCandidates,
+    ] = await Promise.all([
       Interview.countDocuments({ organizationId: orgId }),
       Interview.countDocuments({ organizationId: orgId, status: "completed" }),
       Interview.countDocuments({
@@ -53,15 +60,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ org
       ]),
     ]);
 
-  const completionRate =
-    totalInterviews > 0 ? Math.round((completedInterviews / totalInterviews) * 100) : 0;
+    const completionRate =
+      totalInterviews > 0 ? Math.round((completedInterviews / totalInterviews) * 100) : 0;
 
-  return NextResponse.json({
-    totalInterviews,
-    completedInterviews,
-    recentInterviews,
-    averageScore: avgScoreResult[0]?.avg ? Math.round(avgScoreResult[0].avg * 10) / 10 : null,
-    completionRate,
-    totalCandidates: totalCandidates[0]?.total ?? 0,
+    return {
+      totalInterviews,
+      completedInterviews,
+      recentInterviews,
+      averageScore: avgScoreResult[0]?.avg ? Math.round(avgScoreResult[0].avg * 10) / 10 : null,
+      completionRate,
+      totalCandidates: totalCandidates[0]?.total ?? 0,
+    };
   });
+
+  return NextResponse.json(summary);
 }

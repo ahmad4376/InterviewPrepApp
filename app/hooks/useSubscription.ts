@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { TierFeatures } from "app/lib/subscription/tiers";
 import type { SubscriptionTier, SubscriptionStatus } from "app/models/User";
+
+const STALE_TIME_MS = 2 * 60 * 1000; // 2 minutes
+const LS_KEY = "sub_cache"; // localStorage key for instant-load seed
 
 interface UsageData {
   voiceInterviews: number;
@@ -55,25 +58,66 @@ const DEFAULT_FEATURES: TierFeatures = {
   apiAccess: false,
 };
 
+const LS_CACHE_TTL_MS = 5 * 60 * 1000; // localStorage seed expires after 5 min
+
+interface CachedEntry {
+  data: SubscriptionData;
+  cachedAt: number;
+}
+
+function readLocalCache(): SubscriptionData | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as CachedEntry;
+    // Discard if stale — force a fresh fetch instead
+    if (Date.now() - entry.cachedAt > LS_CACHE_TTL_MS) return null;
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalCache(data: SubscriptionData) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ data, cachedAt: Date.now() }));
+  } catch {
+    // storage full or unavailable — ignore
+  }
+}
+
 export function useSubscription(): UseSubscriptionReturn {
-  const [data, setData] = useState<SubscriptionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Seed from localStorage instantly so the nav renders on first paint
+  // without waiting for the network. The fetch below will update it.
+  const [data, setData] = useState<SubscriptionData | null>(() => {
+    if (typeof window === "undefined") return null;
+    return readLocalCache();
+  });
+  // If we have cached data we can skip the loading skeleton entirely.
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return readLocalCache() === null;
+  });
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+  const lastFetchedAtRef = useRef<number>(0);
 
   const fetchSubscription = useCallback(async () => {
+    lastFetchedAtRef.current = Date.now();
     try {
-      setIsLoading(true);
       setError(null);
       const res = await fetch("/api/billing/subscription");
-      if (!res.ok) {
-        throw new Error("Failed to fetch subscription");
-      }
+      if (!res.ok) throw new Error("Failed to fetch subscription");
       const json = await res.json();
       setData(json);
+      writeLocalCache(json); // keep localStorage in sync for next visit
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
-      setIsLoading(false);
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -81,9 +125,14 @@ export function useSubscription(): UseSubscriptionReturn {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // Refetch on window focus for fresh data
+  // Refetch on window focus, but only when data is stale (> 2 min old).
+  // This avoids nav links flashing every time the user switches tabs.
   useEffect(() => {
-    const handleFocus = () => fetchSubscription();
+    const handleFocus = () => {
+      if (Date.now() - lastFetchedAtRef.current > STALE_TIME_MS) {
+        fetchSubscription();
+      }
+    };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [fetchSubscription]);

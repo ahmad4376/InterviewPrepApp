@@ -22,8 +22,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Populate problem details
-    const problems = await Problem.find({ id: { $in: interview.problems } }).lean();
+    // Populate problem details — strip solutions so they aren't sent to the client
+    // during a structured interview session.
+    const problems = await Problem.find({ id: { $in: interview.problems } })
+      .select("-solutions")
+      .lean();
 
     const problemMap = new Map(problems.map((p) => [p.id, p]));
     const orderedProblems = interview.problems.map((pid) => problemMap.get(pid)).filter(Boolean);

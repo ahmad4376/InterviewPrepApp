@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "app/lib/mongodb";
 import { getAuthUserId } from "app/lib/auth";
 import Submission from "app/models/Submission";
+import { withCache } from "app/lib/redis";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,22 +19,30 @@ export async function GET(request: NextRequest) {
 
     // Return a map of problemId -> best status for the problem browser
     if (statusMap === "true") {
-      const submissions = await Submission.find({ userId }).select("problemId status").lean();
-
-      const map: Record<string, string> = {};
-      for (const sub of submissions) {
-        if (map[sub.problemId] === "accepted") continue;
-        map[sub.problemId] = sub.status === "accepted" ? "accepted" : "attempted";
-      }
+      const map = await withCache<Record<string, string>>(
+        `submissions:statusmap:${userId}`,
+        60, // 60s — invalidated when a new submission is saved
+        async () => {
+          const submissions = await Submission.find({ userId }).select("problemId status").lean();
+          const result: Record<string, string> = {};
+          for (const sub of submissions) {
+            if (result[sub.problemId] === "accepted") continue;
+            result[sub.problemId] = sub.status === "accepted" ? "accepted" : "attempted";
+          }
+          return result;
+        },
+      );
 
       return NextResponse.json(map);
     }
 
     // Return submissions for a specific problem
     if (problemId) {
-      const submissions = await Submission.find({ userId, problemId })
-        .sort({ createdAt: -1 })
-        .lean();
+      const submissions = await withCache(
+        `submissions:history:${userId}:${problemId}`,
+        30, // 30s — short TTL since users submit frequently
+        async () => Submission.find({ userId, problemId }).sort({ createdAt: -1 }).lean(),
+      );
 
       return NextResponse.json(submissions);
     }

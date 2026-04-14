@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUserId } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
+import { encryptField } from "app/lib/encryption";
 import Interview from "app/models/Interview";
 import CandidateSession from "app/models/CandidateSession";
 import Organization from "app/models/Organization";
@@ -98,13 +99,14 @@ export async function POST(_request: Request, { params }: { params: Promise<{ to
   const user = await currentUser();
   const candidateName = user?.fullName || user?.firstName || "Unknown Candidate";
   const candidateEmail = user?.primaryEmailAddress?.emailAddress || "";
+  const candidateEmailEncrypted = encryptField(candidateEmail) ?? "";
 
   try {
     const session = await CandidateSession.create({
       interviewId: interview._id,
       candidateUserId: userId,
       candidateName,
-      candidateEmail,
+      candidateEmail: candidateEmailEncrypted,
       jobLevel: interview.jobLevel ?? null,
       status: "scheduled",
       questionPool: interview.questionPool,

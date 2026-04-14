@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUserId, getAuthContext } from "app/lib/auth";
 import { connectDB } from "app/lib/mongodb";
+import { withCache, getRedis } from "app/lib/redis";
 import { generatePoolQuestions, generateHRQuestions } from "app/lib/openai";
 import { selectQuestions } from "app/lib/questionSelection";
 import { buildSamplingPlan } from "app/lib/sampling";
@@ -10,6 +11,7 @@ import {
   incrementUsage,
   getUserWithTier,
 } from "app/lib/subscription/gate";
+import { encryptField } from "app/lib/encryption";
 import Interview from "app/models/Interview";
 import type { IPoolQuestion } from "app/lib/types";
 import type { ResumeData } from "app/lib/resumeParser";
@@ -203,6 +205,8 @@ export async function POST(request: Request) {
   // Stamp org context if user is acting within an organization
   const { orgId } = await getAuthContext();
 
+  const resumeDataEncrypted = resumeData ? encryptField(JSON.stringify(resumeData)) : null;
+
   const interview = await Interview.create({
     userId,
     organizationId: orgId ?? null,
@@ -213,8 +217,8 @@ export async function POST(request: Request) {
     interviewType,
     questions: displayQuestions,
     status: "scheduled",
-    // Candidate resume data
-    resumeData,
+    // Candidate resume data (AES-256-GCM encrypted string stored in Mixed field)
+    resumeData: resumeDataEncrypted as unknown as null,
     // Adaptive state
     questionPool,
     samplingPlan,
@@ -233,6 +237,14 @@ export async function POST(request: Request) {
   // Track usage after successful creation
   await incrementUsage(userId, "voiceInterviews");
 
+  // Bust the cached interview list so the dashboard reflects the new interview immediately.
+  try {
+    const scope = orgId ? `org:${orgId}` : `user:${userId}`;
+    await getRedis().del(`interviews:${scope}:page:1:limit:10`);
+  } catch {
+    // Redis unavailable — cache will expire naturally via TTL
+  }
+
   return NextResponse.json(
     {
       interviewId: String(interview._id),
@@ -243,35 +255,59 @@ export async function POST(request: Request) {
   );
 }
 
-export async function GET(_request: Request) {
+export async function GET(request: Request) {
   const { userId, orgId } = await getAuthContext();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "10", 10) || 10));
+
   await connectDB();
 
   // When in an org context, show org-scoped interviews; otherwise personal
+  const scope = orgId ? `org:${orgId}` : `user:${userId}`;
+  const cacheKey = `interviews:${scope}:page:${page}:limit:${limit}`;
   const filter = orgId ? { organizationId: orgId } : { userId, organizationId: null };
 
-  const interviews = await Interview.find(filter)
-    .sort({ createdAt: -1 })
-    .select(
-      "title company status createdAt feedback isMassInterview shareToken interviewType userId",
-    )
-    .lean();
+  const payload = await withCache(
+    cacheKey,
+    30, // 30s — invalidated when an interview is created or deleted
+    async () => {
+      const [total, interviews] = await Promise.all([
+        Interview.countDocuments(filter),
+        Interview.find(filter)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .select(
+            "title company status createdAt feedback isMassInterview shareToken interviewType userId",
+          )
+          .lean(),
+      ]);
 
-  const result = interviews.map((i) => ({
-    _id: i._id,
-    title: i.title,
-    company: i.company,
-    status: i.status,
-    createdAt: i.createdAt,
-    hasFeedback: !!i.feedback,
-    isMassInterview: !!i.isMassInterview,
-    shareToken: i.shareToken ?? null,
-    interviewType: i.interviewType ?? "technical",
-  }));
+      const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  return NextResponse.json(result);
+      return {
+        interviews: interviews.map((i) => ({
+          _id: i._id,
+          title: i.title,
+          company: i.company,
+          status: i.status,
+          createdAt: i.createdAt,
+          hasFeedback: !!i.feedback,
+          isMassInterview: !!i.isMassInterview,
+          shareToken: i.shareToken ?? null,
+          interviewType: i.interviewType ?? "technical",
+        })),
+        total,
+        page,
+        totalPages,
+      };
+    },
+  );
+
+  return NextResponse.json(payload);
 }

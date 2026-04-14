@@ -3,6 +3,7 @@ import { getAuthContext } from "app/lib/auth";
 import { canManageTeam } from "app/lib/permissions";
 import { connectDB } from "app/lib/mongodb";
 import Organization from "app/models/Organization";
+import { withCache, getRedis } from "app/lib/redis";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ orgId: string }> }) {
   const { userId, orgId: activeOrgId, orgRole } = await getAuthContext();
@@ -18,21 +19,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ org
   }
 
   await connectDB();
-  let org = await Organization.findOne({ clerkOrgId: orgId });
 
-  // Lazy provisioning — create org record if it doesn't exist
+  // Lazy provisioning must run unconditionally — only the shaped response is cached
+  let org = await Organization.findOne({ clerkOrgId: orgId });
   if (!org) {
     org = await Organization.create({ clerkOrgId: orgId });
   }
 
-  return NextResponse.json({
-    clerkOrgId: org.clerkOrgId,
-    plan: org.plan,
-    seatLimit: org.seatLimit,
-    branding: org.branding,
-    usageStats: org.usageStats,
-    role: orgRole,
-  });
+  const data = await withCache(`org:${orgId}`, 120, async () => ({
+    clerkOrgId: org!.clerkOrgId,
+    plan: org!.plan,
+    seatLimit: org!.seatLimit,
+    branding: org!.branding,
+    usageStats: org!.usageStats,
+  }));
+
+  return NextResponse.json({ ...data, role: orgRole });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ orgId: string }> }) {
@@ -85,6 +87,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
     { $set: allowedUpdates },
     { new: true, upsert: true },
   );
+
+  try {
+    await getRedis().del(`org:${orgId}`);
+  } catch {
+    /* Redis unavailable */
+  }
 
   return NextResponse.json({
     clerkOrgId: org.clerkOrgId,

@@ -111,6 +111,12 @@ jobs:
             --from-literal=STRIPE_WEBHOOK_SECRET='${{ secrets.STRIPE_WEBHOOK_SECRET }}' \
             --from-literal=STRIPE_PRICE_PRO_MONTHLY='${{ secrets.STRIPE_PRICE_PRO_MONTHLY }}' \
             --from-literal=STRIPE_PRICE_BUSINESS_MONTHLY='${{ secrets.STRIPE_PRICE_BUSINESS_MONTHLY }}' \
+            --from-literal=UPSTASH_REDIS_REST_URL='${{ secrets.UPSTASH_REDIS_REST_URL }}' \
+            --from-literal=UPSTASH_REDIS_REST_TOKEN='${{ secrets.UPSTASH_REDIS_REST_TOKEN }}' \
+            --from-literal=ADMIN_USER_IDS='${{ secrets.ADMIN_USER_IDS }}' \
+            --from-literal=ENCRYPTION_KEY='${{ secrets.ENCRYPTION_KEY }}' \
+            --from-literal=RESEND_API_KEY='${{ secrets.RESEND_API_KEY }}' \
+            --from-literal=PISTON_API_URL='${{ secrets.PISTON_API_URL }}' \
             -n interview-prep \
             --dry-run=client -o yaml | kubectl apply -f -
 

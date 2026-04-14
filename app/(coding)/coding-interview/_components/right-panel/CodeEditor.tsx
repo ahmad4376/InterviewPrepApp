@@ -1,6 +1,7 @@
 "use client";
 
 import MonacoEditor from "@monaco-editor/react";
+import { useTheme } from "next-themes";
 import type { Language } from "../../_lib/types";
 
 interface CodeEditorProps {
@@ -10,13 +11,15 @@ interface CodeEditorProps {
 }
 
 export default function CodeEditor({ language, code, onChange }: CodeEditorProps) {
+  const { resolvedTheme } = useTheme();
+
   return (
     <MonacoEditor
       height="100%"
       language={language}
       value={code}
       onChange={(value) => onChange(value || "")}
-      theme="vs-dark"
+      theme={resolvedTheme === "dark" ? "vs-dark" : "light"}
       options={{
         minimap: { enabled: false },
         fontSize: 14,

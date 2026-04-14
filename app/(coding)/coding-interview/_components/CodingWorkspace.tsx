@@ -181,7 +181,7 @@ export default function CodingWorkspace({
   }, []);
 
   return (
-    <div className={`${hideTopBar ? "h-full" : "h-screen"} flex flex-col bg-[#0b0b0b]`}>
+    <div className={`${hideTopBar ? "h-full" : "h-screen"} flex flex-col bg-background`}>
       {!hideTopBar ? (
         <TopBar
           problem={currentProblem}
@@ -193,13 +193,13 @@ export default function CodingWorkspace({
           onNextProblem={() => handleProblemChange("next")}
         />
       ) : (
-        <div className="border-b border-gray-800 bg-[#1a1a1a] px-4 py-2 flex items-center justify-between flex-shrink-0">
+        <div className="border-b border-border bg-card px-4 py-2 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-white truncate max-w-[300px]">
+            <span className="text-sm font-semibold text-foreground truncate max-w-[300px]">
               {currentProblem.title}
             </span>
             <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full bg-gray-800 ${
+              className={`text-xs font-medium px-2 py-0.5 rounded-full bg-muted ${
                 currentProblem.difficulty_bucket === "easy"
                   ? "text-green-400"
                   : currentProblem.difficulty_bucket === "medium"
@@ -209,7 +209,7 @@ export default function CodingWorkspace({
             >
               {currentProblem.difficulty_bucket}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Problem {currentProblemIndex + 1} of {problems.length}
             </span>
           </div>
@@ -218,14 +218,14 @@ export default function CodingWorkspace({
               <button
                 onClick={() => handleProblemChange("prev")}
                 disabled={currentProblemIndex === 0}
-                className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition text-xs"
+                className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition text-xs"
               >
                 Prev
               </button>
               <button
                 onClick={() => handleProblemChange("next")}
                 disabled={currentProblemIndex === problems.length - 1}
-                className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition text-xs"
+                className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition text-xs"
               >
                 Next
               </button>
@@ -233,7 +233,7 @@ export default function CodingWorkspace({
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="bg-gray-800 text-gray-200 px-3 py-1.5 rounded-md border border-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-[#3ecf8e]"
+              className="bg-muted text-foreground px-3 py-1.5 rounded-md border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="javascript">JavaScript</option>
               <option value="python">Python</option>
@@ -253,6 +253,7 @@ export default function CodingWorkspace({
           lastAction={lastAction}
           language={language}
           code={code}
+          hideSolution={!!codingInterviewId}
         />
         <RightPanel
           language={language}
