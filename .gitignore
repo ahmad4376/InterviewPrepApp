@@ -42,10 +42,15 @@ next-env.d.ts
 # clerk
 .clerk/
 
-# claude
+# claude / AI tooling
 .claude/
+CLAUDE.md
 claude.md
 deepgram_agent_docs.md
+
+# markdown files (keep only README.md)
+*.md
+!README.md
 
 # clerk configuration (can include secrets)
 /.clerk/
