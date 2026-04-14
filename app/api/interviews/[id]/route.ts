@@ -32,16 +32,26 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
 
-  // Decrypt sensitive fields before returning
-  const decryptedTranscriptRaw = decryptField(interview.transcript as unknown as string);
-  const decryptedResumeDataRaw = decryptField(interview.resumeData as unknown as string);
+  // Decrypt sensitive fields before returning.
+  // transcript / resumeData may be: encrypted string | plain array/object (pre-encryption rows) | null
+  function safeDecryptJson<T>(raw: unknown, fallback: T): T {
+    if (!raw || typeof raw !== "string") return fallback ?? (raw as T);
+    const decrypted = decryptField(raw);
+    if (!decrypted) return fallback;
+    try {
+      return JSON.parse(decrypted) as T;
+    } catch {
+      return fallback;
+    }
+  }
 
   const decryptedInterview = {
     ...interview,
-    transcript: decryptedTranscriptRaw
-      ? (JSON.parse(decryptedTranscriptRaw) as TranscriptEntry[])
-      : interview.transcript,
-    resumeData: decryptedResumeDataRaw ? JSON.parse(decryptedResumeDataRaw) : interview.resumeData,
+    transcript: safeDecryptJson<TranscriptEntry[]>(
+      interview.transcript as unknown as string,
+      interview.transcript as unknown as TranscriptEntry[],
+    ),
+    resumeData: safeDecryptJson(interview.resumeData, interview.resumeData),
   };
 
   return NextResponse.json(decryptedInterview);

@@ -167,7 +167,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${request.headers.get("host") ?? ""}`;
   const joinUrl = `${appUrl}/join/${interview.shareToken}`;
-  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@interviewprepapp.com";
+  // Use RESEND_FROM_EMAIL if set (requires a verified domain in Resend dashboard).
+  // Falls back to Resend's shared sandbox address which works without domain verification.
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
   const resend = new Resend(process.env.RESEND_API_KEY);
 
