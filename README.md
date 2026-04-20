@@ -113,6 +113,9 @@ The platform supports both **individual practice** and **mass interview campaign
 - **Client-side localStorage seeding** — dashboard and subscription data render instantly on revisits from a 1-minute client-side cache, eliminating the loading spinner on repeat visits
 - **AES-256-GCM field-level encryption** — transcripts, resume data, and candidate emails are encrypted at rest in MongoDB before storage
 - **Clerk production instance** — authentication runs on a production Clerk environment with custom domain (`clerk.interviewprep.studio`), eliminating the dev-mode handshake redirect chain
+- **HTTP security headers** — applied globally via `next.config.mjs`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security` (1 year + subdomains), `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (blocks camera and geolocation)
+- **Input sanitisation** — HTML-escaped interview titles, company names, and join URLs in email invite templates to prevent HTML injection attacks
+- **ReDoS protection** — admin user search escapes regex metacharacters before passing to MongoDB `$regex` to prevent pathological backtracking on crafted inputs
 
 ---
 
@@ -299,6 +302,8 @@ Dockerfile                             # Production container (Next.js standalon
 **User** — Clerk user reference with subscription tier (`free` / `pro` / `business`), usage counters (monthly resets), Stripe customer and subscription IDs, and profile fields (`bio`, `jobTitle`, `resumeData`).
 
 **Organization** — Clerk org reference with custom branding fields (`logoUrl`, `primaryColor`, `secondaryColor`, `companyName`).
+
+**UsageRecord** — Tracks per-user monthly usage events (interview starts, code submissions) for billing and analytics. Enables server-side enforcement of tier limits with monthly resets.
 
 ---
 
@@ -654,6 +659,18 @@ npm run typecheck
 4. Wrap cacheable reads with `withCache(key, ttlSeconds, fn)`
 5. Call `getRedis().del(key)` after any write that affects cached data
 6. Return `NextResponse.json(...)` for all responses
+
+### Testing
+
+End-to-end tests are in `tests/` and run with [Playwright](https://playwright.dev/). To run them locally:
+
+```bash
+npx playwright install   # first-time only
+npx playwright test
+# HTML report written to test-results/
+```
+
+The CI pipeline does not run E2E tests automatically — they are intended for local verification before merging significant UI changes.
 
 ### CI / CD Pipeline
 
