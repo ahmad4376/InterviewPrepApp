@@ -76,7 +76,10 @@ const CodingInterviewSchema = new Schema<ICodingInterview>(
 
 CodingInterviewSchema.index({ userId: 1, createdAt: -1 });
 CodingInterviewSchema.index({ userId: 1, status: 1 });
-CodingInterviewSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
+CodingInterviewSchema.index(
+  { shareToken: 1 },
+  { unique: true, partialFilterExpression: { shareToken: { $type: "string" } } },
+);
 
 const CodingInterview: Model<ICodingInterview> =
   (mongoose.models.CodingInterview as Model<ICodingInterview>) ||

@@ -144,7 +144,10 @@ const interviewSchema = new Schema<IInterview>(
 interviewSchema.index({ userId: 1, createdAt: -1 });
 interviewSchema.index({ organizationId: 1, createdAt: -1 });
 interviewSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
-interviewSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
+interviewSchema.index(
+  { shareToken: 1 },
+  { unique: true, partialFilterExpression: { shareToken: { $type: "string" } } },
+);
 
 const Interview =
   (mongoose.models.Interview as mongoose.Model<IInterview>) ||
